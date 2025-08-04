@@ -25,8 +25,8 @@ declare -a RETRY_NODES=()
 # Function to get and increment version number
 get_and_increment_version() {
     if [ ! -f "$VERSION_FILE" ]; then
-        echo "1.0.0" > "$VERSION_FILE"
-        echo "Created $VERSION_FILE with initial version 1.0.0"
+        echo "1.1.0" > "$VERSION_FILE"
+        echo "Created $VERSION_FILE with initial version 1.1.0"
     fi
     
     local current_version=$(cat "$VERSION_FILE")

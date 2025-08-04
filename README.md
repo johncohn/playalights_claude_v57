@@ -2,7 +2,7 @@
 
 A sophisticated distributed LED art installation system using M5StickC Plus2 microcontrollers to create synchronized light shows across multiple nodes. Each node controls 334 WS2812B NeoPixel LEDs with advanced networking, audio reactivity, and individual user control.
 
-## Current Status: Version 1.0.x (Auto-Incrementing)
+## Current Status: Version 1.1.x (Auto-Incrementing)
 
 **Last Updated**: January 2025  
 **Active Nodes**: ~10 devices  
@@ -44,7 +44,7 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 - **Brightness Display**: Shows current local brightness level (e.g., "LOCAL 50%")
 - **Pattern Info**: Current pattern name or "Following Leader"
 - **Connection Status**: ".236" (WiFi IP) or "LOCAL" (offline mode) in bottom right
-- **Version Display**: "v1.0.5" in bottom left corner
+- **Version Display**: "v1.1.x" in bottom left corner
 - **Freeze Indicator**: [F] shown when patterns are frozen
 
 ## Pattern System
