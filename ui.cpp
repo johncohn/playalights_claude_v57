@@ -4,7 +4,8 @@
 const char* MODE_NAMES[MODE_COUNT] = {"AUTO","OFF"};
 
 // Define brightness levels - LOCAL CONTROL ONLY
-BrightnessLevel brightnessLevels[5] = {
+BrightnessLevel brightnessLevels[6] = {
+  {"LOCAL 6%", 15},    // 6% brightness (~1/16th) - ultra dim
   {"LOCAL 12%", 32},   // 12.5% brightness (1/8th) - very dim
   {"LOCAL 25%", 64},   // 25% brightness (1/4th) - DEFAULT
   {"LOCAL 50%", 128},  // 50% brightness (1/2)
@@ -111,15 +112,15 @@ void handleButtons(){
       M5.Lcd.setBrightness(255);
       
       // Start at default brightness (25%)
-      static uint8_t currentLevel = 1; // Start at 25% (index 1)
+      static uint8_t currentLevel = 2; // Start at 25% (index 2)
       globalBrightnessScale = brightnessLevels[currentLevel].scale;
       
       if(DEBUG_SERIAL) Serial.printf("WAKE: %s\n", brightnessLevels[currentLevel].name);
       
     } else {
       // Cycle brightness in AUTO mode
-      static uint8_t currentLevel = 1; // Start at 25% (index 1)
-      currentLevel = (currentLevel + 1) % 5; // Cycle through 5 brightness levels
+      static uint8_t currentLevel = 2; // Start at 25% (index 2)
+      currentLevel = (currentLevel + 1) % 6; // Cycle through 6 brightness levels
       
       globalBrightnessScale = brightnessLevels[currentLevel].scale;
       
@@ -158,7 +159,7 @@ void drawUI(){
   } else {
     // Find current brightness level name - but show LOCAL/WIFI status
     String brightnessName;
-    for(int i = 0; i < 5; i++) {
+    for(int i = 0; i < 6; i++) {
       if(globalBrightnessScale == brightnessLevels[i].scale) {
         brightnessName = String(brightnessLevels[i].name);
         break;

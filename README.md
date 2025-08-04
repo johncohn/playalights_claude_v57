@@ -28,14 +28,14 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 
 ### Individual Brightness Control
 - **Local Control**: Each node controls its own brightness independently
-- **5 Brightness Levels**: 12%, 25% (default), 50%, 75%, 100%
+- **6 Brightness Levels**: 6%, 12%, 25% (default), 50%, 75%, 100%
 - **Music Synchronization**: Leader's audio reactivity baked into LED colors, then each node applies local brightness
 - **OFF Mode**: Complete sleep with dimmed display for battery savings
 
 ## User Interface
 
 ### Button Controls
-- **Button A Short Press**: Cycle through brightness levels (LOCAL 12% → 25% → 50% → 75% → 100%)
+- **Button A Short Press**: Cycle through brightness levels (LOCAL 6% → 12% → 25% → 50% → 75% → 100%)
 - **Button A Long Press (2s)**: Enter/exit OFF mode
 - **Button B**: Pattern freeze/advance (only works when node is leader)
 
@@ -143,7 +143,7 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 - ✅ Distributed leader election with automatic failover
 - ✅ 22 diverse LED patterns with smooth transitions
 - ✅ Synchronized music reactivity across all nodes (dramatic response restored)
-- ✅ Individual brightness control (12%-100% + OFF)
+- ✅ Individual brightness control (6%-100% + OFF)
 - ✅ Robust ESP-NOW networking with chunk validation
 - ✅ OTA deployment system with retry logic and version management
 - ✅ Audio-responsive brightness scaling with full dynamic range

@@ -57,7 +57,7 @@ static constexpr uint32_t BPM_WINDOW = 5000;
 // ── Names ─────────────────────────────────────────────────────────────────────
 extern const char* MODE_NAMES[MODE_COUNT];
 extern const char* STYLE_NAMES[22];
-extern BrightnessLevel brightnessLevels[5];
+extern BrightnessLevel brightnessLevels[6];
 
 // ── Global Variables ──────────────────────────────────────────────────────────
 extern Mode      currentMode;
