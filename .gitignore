@@ -1,0 +1,60 @@
+# Arduino build artifacts
+build/
+build_bootstrap/
+*.bin
+*.elf
+*.map
+*.lst
+*.eep
+*.hex
+*.asm
+
+# Compiled Object files
+*.o
+*.d
+*.a
+*.lib
+
+# Temporary files
+*.tmp
+*.temp
+*~
+.DS_Store
+Thumbs.db
+
+# IDE files (VSCode, Arduino IDE)
+.vscode/
+.pio/
+__pycache__/
+*.pyc
+
+# Cache files
+*.cache
+includes.cache
+libraries.cache
+
+# SDK config
+sdkconfig
+sdkconfig.old
+
+# Build options and configs
+build.options.json
+file_opts
+
+# Version management (keep version.h in git, but not version.txt which auto-increments)
+version.txt
+
+# Node configuration (keep in git for team sharing, but could be excluded if needed)
+# nodes.txt
+
+# Log files
+*.log
+
+# Backup files
+*.bak
+*.backup
+
+# OS generated files
+*.swp
+*.swo
+*~
