@@ -36,8 +36,9 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 
 ### Button Controls
 - **Button A Short Press**: Cycle through brightness levels (LOCAL 6% → 12% → 25% → 50% → 75% → 100%)
-- **Button A Long Press (2s)**: Enter/exit OFF mode
+- **Button A Long Press (2s)**: Enter/exit OFF mode (auto-syncs on wake)
 - **Button B**: Pattern freeze/advance (only works when node is leader)
+- **Button C**: Manual sync reset (force resynchronization with other nodes)
 
 ### LCD Display
 - **Color-coded Status**: Orange (Leader), Green (Follower), Purple (Election), Black (OFF)

@@ -1,5 +1,6 @@
 #include "ui.h"
 #include "version.h" // Include the auto-generated version file
+#include "networking.h" // For forceSyncReset function
 
 const char* MODE_NAMES[MODE_COUNT] = {"AUTO","OFF"};
 
@@ -105,8 +106,6 @@ void handleButtons(){
     if(currentMode == OFF) {
       // Wake up from OFF mode
       currentMode = AUTO;
-      fsmState = FOLLOWER;
-      lastRecvMillis = now;
       
       // Restore display brightness
       M5.Lcd.setBrightness(255);
@@ -115,7 +114,13 @@ void handleButtons(){
       static uint8_t currentLevel = 2; // Start at 25% (index 2)
       globalBrightnessScale = brightnessLevels[currentLevel].scale;
       
-      if(DEBUG_SERIAL) Serial.printf("WAKE: %s\n", brightnessLevels[currentLevel].name);
+      if(DEBUG_SERIAL) {
+        Serial.printf("WAKE: %s - forcing sync reset\n", brightnessLevels[currentLevel].name);
+      }
+      
+      // CRITICAL: Force sync reset when waking up
+      // Node may have missed leader elections and pattern changes while sleeping
+      forceSyncReset();
       
     } else {
       // Cycle brightness in AUTO mode
@@ -142,6 +147,28 @@ void handleButtons(){
         Serial.printf("Pattern advance → %s [frozen]\n", STYLE_NAMES[styleIdx]);
       }
     }
+  }
+  
+  // Button C: Manual sync reset (emergency resync button)
+  if(M5.BtnC.wasClicked() && currentMode == AUTO) {
+    if(DEBUG_SERIAL) Serial.println("MANUAL SYNC RESET requested via Button C");
+    
+    // Show reset indication on screen briefly
+    canvas.fillSprite(TFT_BLACK);
+    canvas.fillRect(0, 0, M5.Lcd.width(), 40, TFT_YELLOW);
+    canvas.setTextSize(2);
+    canvas.setTextColor(TFT_BLACK);
+    canvas.setCursor(10, 10);
+    canvas.print("SYNC RESET");
+    canvas.setTextSize(1);
+    canvas.setCursor(10, 50);
+    canvas.print("Forcing resync...");
+    canvas.pushSprite(0, 0);
+    
+    // Force sync reset
+    forceSyncReset();
+    
+    delay(1000); // Show message for 1 second
   }
 }
 

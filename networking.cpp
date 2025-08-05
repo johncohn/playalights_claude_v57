@@ -117,6 +117,9 @@ void checkWiFiStatusQuickly() {
         esp_now_add_peer(&peer);
       }
     }
+    
+    // Handle WiFi transition with sync reset
+    handleWiFiTransition(wifiPreviouslyConnected, currentlyConnected);
     wifiPreviouslyConnected = currentlyConnected;
   }
   
@@ -222,6 +225,63 @@ void checkWiFiPeriodically() {
   }
   
   wifiCheckInProgress = false;
+}
+
+void forceSyncReset() {
+  if(DEBUG_SERIAL) Serial.println("[SYNC] Forcing synchronization reset...");
+  
+  // Clear all FSM state
+  fsmState = FOLLOWER;
+  lastRecvMillis = 0;
+  lastHeartbeat = 0;
+  electionEnd = 0;
+  highestTokenSeen = 0;
+  
+  // Clear LED state to force fresh pattern
+  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  FastLED.show();
+  
+  // Reset networking state
+  esp_now_deinit();
+  delay(200); // Brief pause for cleanup
+  
+  // Reinitialize ESP-NOW
+  esp_now_init();
+  esp_now_register_recv_cb(onRecv);
+  esp_now_peer_info_t peer={};
+  memcpy(peer.peer_addr, broadcastAddress, 6);
+  peer.channel = 0; 
+  peer.encrypt = false;
+  esp_now_add_peer(&peer);
+  
+  // Force new election after brief delay
+  uint32_t now = millis();
+  electionEnd = now + ELECTION_TIMEOUT + 500; // Extra delay for stability
+  myDelay = random(100, 300); // Randomize to avoid conflicts
+  
+  if(DEBUG_SERIAL) {
+    Serial.println("[SYNC] Reset complete - forcing new election");
+    Serial.printf("[SYNC] Token: 0x%06X, Election delay: %ums\n", myToken, myDelay);
+  }
+}
+
+void handleWiFiTransition(bool wasConnected, bool nowConnected) {
+  if (wasConnected == nowConnected) return; // No change
+  
+  if(DEBUG_SERIAL) {
+    Serial.printf("[WIFI] Transition: %s -> %s\n", 
+      wasConnected ? "CONNECTED" : "DISCONNECTED",
+      nowConnected ? "CONNECTED" : "DISCONNECTED");
+  }
+  
+  // Brief pause to let network settle
+  delay(100);
+  
+  // Force sync reset on any WiFi transition
+  // This prevents nodes from getting stuck in stale states
+  forceSyncReset();
+  
+  if(DEBUG_SERIAL) Serial.println("[WIFI] Sync reset complete - nodes should resynchronize");
 }
 
 void handleNetworking(){

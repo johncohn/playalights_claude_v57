@@ -195,6 +195,7 @@ void setup(){
       globalBrightnessScale, (globalBrightnessScale * 100.0f) / 255.0f);
     Serial.println("Button A: Short press = local brightness cycle, Long press = OFF/ON");
     Serial.println("Button B: Pattern freeze/advance (AUTO-LEADER mode only)");
+    Serial.println("Button C: Manual sync reset (force resynchronization)");
     Serial.println("ESP-NOW mesh network active - WiFi optional for OTA");
   }
   feedWatchdog();
