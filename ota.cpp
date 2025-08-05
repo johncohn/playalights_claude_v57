@@ -1,17 +1,68 @@
 #include "ota.h"
+#include "esp_task_wdt.h"
+
+// OTA mode state tracking
+static bool otaMode = false;
+static unsigned long otaModeStartTime = 0;
+static const unsigned long OTA_MODE_TIMEOUT = 300000; // 5 minutes
+static bool espnowWasActive = false;
+
+void enterOTAMode() {
+  if (otaMode) return; // Already in OTA mode
+  
+  if(DEBUG_SERIAL) Serial.println("[OTA] Entering OTA mode - disabling ESP-NOW");
+  
+  // Remember if ESP-NOW was active
+  espnowWasActive = esp_now_is_peer_exist(NULL);
+  
+  // Completely disable ESP-NOW and clear all peers
+  if (espnowWasActive) {
+    esp_now_deinit();
+  }
+  
+  // Force WiFi into pure STA mode with aggressive settings
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
+  WiFi.setSleep(false); // Disable WiFi sleep for stability
+  
+  // Clear any residual network operations
+  delay(100);
+  
+  otaMode = true;
+  otaModeStartTime = millis();
+  
+  if(DEBUG_SERIAL) Serial.println("[OTA] Mode activated - ESP-NOW disabled, WiFi optimized");
+}
+
+void exitOTAMode() {
+  if (!otaMode) return; // Not in OTA mode
+  
+  if(DEBUG_SERIAL) Serial.println("[OTA] Exiting OTA mode - re-enabling systems");
+  
+  otaMode = false;
+  
+  // Restore WiFi power management
+  WiFi.setSleep(true);
+  
+  // Wait before reinitializing ESP-NOW to avoid conflicts
+  delay(500);
+  
+  if(DEBUG_SERIAL) Serial.println("[OTA] Mode exited - systems will reinitialize");
+}
+
+bool isInOTAMode() {
+  return otaMode;
+}
 
 void initOTA(){
   // Only initialize OTA if WiFi is connected
   if (WiFi.status() != WL_CONNECTED) {
-    if(DEBUG_SERIAL) Serial.println("OTA disabled - no WiFi connection");
+    if(DEBUG_SERIAL) Serial.println("[OTA] Disabled - no WiFi connection");
     return;
   }
   
-  // CRITICAL: Disable ESP-NOW immediately to prevent interference
-  // This is especially important for leader nodes that constantly broadcast
-  if(DEBUG_SERIAL) Serial.println("Disabling ESP-NOW for OTA preparation");
-  esp_now_deinit();
-  WiFi.mode(WIFI_STA); // Ensure we stay in STA mode for OTA
+  // Enter dedicated OTA mode
+  enterOTAMode();
   
   // Create unique hostname using the node's token
   String hostname = "NeoNode-" + String(myToken, HEX);
@@ -23,12 +74,16 @@ void initOTA(){
   // Set port (default 3232 is fine for most cases)
   ArduinoOTA.setPort(3232);
   
+  // More aggressive OTA settings for reliability
+  ArduinoOTA.setRebootOnSuccess(true);
+  
   setOTACallbacks();
   ArduinoOTA.begin();
   
   if(DEBUG_SERIAL) {
-    Serial.printf("OTA initialized: %s.local (IP: %s) - ESP-NOW disabled\n", 
+    Serial.printf("[OTA] Initialized: %s.local (IP: %s)\n", 
       hostname.c_str(), WiFi.localIP().toString().c_str());
+    Serial.printf("[OTA] Mode: ACTIVE, ESP-NOW: DISABLED, Timeout: %lus\n", OTA_MODE_TIMEOUT/1000);
   }
 }
 
@@ -41,13 +96,18 @@ void setOTACallbacks(){
       type = "filesystem";
     }
     
-    if(DEBUG_SERIAL) Serial.println("OTA Start updating " + type);
+    if(DEBUG_SERIAL) Serial.println("[OTA] Starting update: " + type);
     
-    // Turn off all LEDs immediately and keep them dark during entire upload
+    // Ensure we're in maximum stability mode
+    WiFi.setSleep(false);
+    esp_task_wdt_delete(NULL); // Temporarily disable watchdog
+    
+    // Turn off all LEDs immediately and keep them dark
     fill_solid(leds, NUM_LEDS, CRGB::Black);
     FastLED.show();
+    FastLED.delay(10); // Brief delay to ensure LEDs are off
     
-    // Show OTA status on LCD only
+    // Show OTA status on LCD
     canvas.fillSprite(TFT_BLACK);
     canvas.fillRect(0, 0, M5.Lcd.width(), 40, TFT_BLUE);
     canvas.setTextSize(2);
@@ -58,14 +118,16 @@ void setOTACallbacks(){
     canvas.setCursor(10, 50);
     canvas.print("Updating " + type + "...");
     canvas.setCursor(10, 65);
-    canvas.print("ESP-NOW disabled");
+    canvas.print("ESP-NOW: DISABLED");
     canvas.setCursor(10, 80);
-    canvas.print("LEDs off for stability");
+    canvas.print("Max stability mode");
     canvas.pushSprite(0, 0);
+    
+    if(DEBUG_SERIAL) Serial.println("[OTA] Stability mode activated");
   });
 
   ArduinoOTA.onEnd([]() {
-    if(DEBUG_SERIAL) Serial.println("\nOTA Update Complete!");
+    if(DEBUG_SERIAL) Serial.println("[OTA] Update completed successfully!");
     
     // Success indication - solid green
     fill_solid(leds, NUM_LEDS, CRGB::Green);
@@ -80,12 +142,13 @@ void setOTACallbacks(){
     canvas.print("OTA SUCCESS");
     canvas.setTextSize(1);
     canvas.setCursor(10, 50);
-    canvas.print("Rebooting...");
+    canvas.print("Rebooting in 3s...");
     canvas.setCursor(10, 65);
-    canvas.print("Will restart normally");
+    canvas.print("Systems will restore");
     canvas.pushSprite(0, 0);
     
-    delay(2000); // Show success for 2 seconds before reboot
+    delay(3000); // Show success for 3 seconds before reboot
+    if(DEBUG_SERIAL) Serial.println("[OTA] Rebooting now...");
     // ESP will automatically restart after OTA completion
   });
 
@@ -135,7 +198,7 @@ void setOTACallbacks(){
     String errorMsg = "Unknown error";
     
     if(DEBUG_SERIAL) {
-      Serial.printf("OTA Error[%u]: ", error);
+      Serial.printf("[OTA] Error[%u]: ", error);
       
       if (error == OTA_AUTH_ERROR) {
         errorMsg = "Auth Failed";
@@ -170,13 +233,18 @@ void setOTACallbacks(){
     canvas.setCursor(10, 50);
     canvas.print(errorMsg);
     canvas.setCursor(10, 65);
-    canvas.print("Will restart in 5s");
+    canvas.print("Restart in 3s");
+    canvas.setCursor(10, 80);
+    canvas.print("Will exit OTA mode");
     canvas.pushSprite(0, 0);
     
-    delay(5000); // Show error for 5 seconds
+    delay(3000); // Show error for 3 seconds
     
-    // Restart the device to recover from OTA error
-    if(DEBUG_SERIAL) Serial.println("Restarting after OTA error...");
+    // Exit OTA mode before restart to ensure clean recovery
+    exitOTAMode();
+    delay(500);
+    
+    if(DEBUG_SERIAL) Serial.println("[OTA] Restarting after error...");
     ESP.restart();
   });
 }
@@ -189,10 +257,26 @@ bool isESPNowActive(){
 
 void handleOTA(){
   // Only handle OTA if WiFi is connected
-  if (WiFi.status() == WL_CONNECTED) {
-    // Warn if ESP-NOW is still active (shouldn't happen with our changes)
+  if (WiFi.status() != WL_CONNECTED) {
+    if (otaMode) {
+      if(DEBUG_SERIAL) Serial.println("[OTA] WiFi lost - exiting OTA mode");
+      exitOTAMode();
+    }
+    return;
+  }
+  
+  // Check for OTA mode timeout
+  if (otaMode && (millis() - otaModeStartTime > OTA_MODE_TIMEOUT)) {
+    if(DEBUG_SERIAL) Serial.println("[OTA] Mode timeout - exiting");
+    exitOTAMode();
+    return;
+  }
+  
+  // Handle OTA operations
+  if (otaMode) {
+    // Warn if ESP-NOW somehow became active (shouldn't happen)
     if (isESPNowActive() && DEBUG_SERIAL) {
-      Serial.println("Warning: ESP-NOW still active during OTA handling");
+      Serial.println("[OTA] WARNING: ESP-NOW unexpectedly active!");
     }
     ArduinoOTA.handle();
   }

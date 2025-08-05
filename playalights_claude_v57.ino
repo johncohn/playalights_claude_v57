@@ -75,8 +75,8 @@ void checkSystemHealth() {
   if (now - lastSystemCheck < SYSTEM_CHECK_INTERVAL) return;
   lastSystemCheck = now;
   
-  // Check ESP-NOW peer status
-  if (!esp_now_is_peer_exist(broadcastAddress)) {
+  // Check ESP-NOW peer status (but not if in OTA mode)
+  if (!isInOTAMode() && !esp_now_is_peer_exist(broadcastAddress)) {
     if(DEBUG_SERIAL) Serial.println("HEALTH: ESP-NOW broadcast peer missing - re-adding");
     esp_now_peer_info_t peer={};
     memcpy(peer.peer_addr, broadcastAddress, 6);
@@ -84,6 +84,17 @@ void checkSystemHealth() {
     peer.encrypt = false;
     esp_now_add_peer(&peer);
   }
+  
+  // Check if ESP-NOW needs reinitializing after OTA mode exit
+  static bool wasInOTAMode = false;
+  bool currentlyInOTA = isInOTAMode();
+  if (wasInOTAMode && !currentlyInOTA) {
+    // Just exited OTA mode - reinitialize networking
+    if(DEBUG_SERIAL) Serial.println("HEALTH: Reinitializing networking after OTA mode");
+    delay(100); // Brief pause for stability
+    initNetworking();
+  }
+  wasInOTAMode = currentlyInOTA;
   
   // Check if we're stuck in a bad state
   static FsmState lastFsmState = FOLLOWER;

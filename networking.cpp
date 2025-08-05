@@ -1,4 +1,5 @@
 #include "networking.h"
+#include "ota.h"
 #include "audio.h"
 #include "patterns.h"
 
@@ -27,6 +28,12 @@ bool wifiJustDisconnected = false;
 
 void initNetworking(){
   if(DEBUG_SERIAL) Serial.println("Initializing ESP-NOW (priority)...");
+  
+  // Check if we're in OTA mode - don't initialize ESP-NOW if so
+  if (isInOTAMode()) {
+    if(DEBUG_SERIAL) Serial.println("[NET] Skipping ESP-NOW init - OTA mode active");
+    return;
+  }
   
   // CRITICAL: Initialize ESP-NOW FIRST with no delays
   WiFi.mode(WIFI_STA);
@@ -221,6 +228,11 @@ void handleNetworking(){
   uint32_t now = millis();
   
   if(currentMode != AUTO) return;
+  
+  // Skip networking operations if in OTA mode
+  if (isInOTAMode()) {
+    return;
+  }
   
   // Check WiFi status quickly and frequently (non-blocking)
   checkWiFiStatusQuickly();

@@ -9,5 +9,8 @@ void initOTA();
 void handleOTA();
 void setOTACallbacks();
 bool isESPNowActive();
+void enterOTAMode();
+void exitOTAMode();
+bool isInOTAMode();
 
 #endif
