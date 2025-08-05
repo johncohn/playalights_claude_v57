@@ -15,6 +15,7 @@ END_IP=250
 OTA_PORT=3232
 VERSION_FILE="version.txt"
 MAX_RETRIES=3
+ESPOTA_PATH="/Users/johncohn/Library/Arduino15/packages/esp32/hardware/esp32/3.2.1/tools/espota.py"
 
 # Arrays for tracking nodes
 declare -a NODES=()
@@ -116,57 +117,37 @@ upload_to_node() {
     
     echo "Uploading to Node $node_num ($ip) - Attempt $attempt/$MAX_RETRIES..."
     
-    local expect_script=$(mktemp)
-    cat > "$expect_script" << 'EOF'
-#!/usr/bin/expect -f
-set timeout 120
-set ip [lindex $argv 0]
-set fqbn [lindex $argv 1]
-set build_dir [lindex $argv 2]
-set password [lindex $argv 3]
-
-spawn arduino-cli upload --fqbn $fqbn --port $ip --input-dir $build_dir .
-expect {
-    "Password:" {
-        send "$password\r"
-        exp_continue
-    }
-    "password:" {
-        send "$password\r"
-        exp_continue
-    }
-    timeout {
-        puts "Upload timeout after 120 seconds"
-        exit 1
-    }
-    eof
-}
-EOF
-    
-    chmod +x "$expect_script"
-    
-    local upload_output
-    local exit_code
-    if command -v expect >/dev/null 2>&1; then
-        upload_output=$("$expect_script" "$ip" "$FQBN" "$BUILD_DIR" "$PASSWORD" 2>&1)
-        exit_code=$?
-    else
-        upload_output=$(timeout 120 arduino-cli upload --fqbn $FQBN --port $ip --input-dir "$BUILD_DIR" . 2>&1)
-        exit_code=$?
+    # Find the compiled binary
+    local binary_file="$BUILD_DIR/playalights_claude_v57.ino.bin"
+    if [ ! -f "$binary_file" ]; then
+        echo "   Node $node_num (Attempt $attempt): Binary file not found: $binary_file"
+        echo "FAILED: Node $node_num ($ip) - Attempt $attempt failed (no binary)"
+        return 1
     fi
     
-    rm -f "$expect_script"
+    # Check if espota.py exists
+    if [ ! -f "$ESPOTA_PATH" ]; then
+        echo "   Node $node_num (Attempt $attempt): espota.py not found at: $ESPOTA_PATH"
+        echo "FAILED: Node $node_num ($ip) - Attempt $attempt failed (no espota.py)"
+        return 1
+    fi
+    
+    # Use espota.py for OTA upload
+    local upload_output
+    local exit_code
+    upload_output=$(python3 "$ESPOTA_PATH" -i "$ip" -p "$OTA_PORT" -a "$PASSWORD" -f "$binary_file" -r -d 2>&1)
+    exit_code=$?
     
     # Show output with node prefix
     echo "$upload_output" | while IFS= read -r line; do
         echo "   Node $node_num (Attempt $attempt): $line"
     done
     
-    # Improved failure detection
-    if echo "$upload_output" | grep -q "Could not open.*port is busy\|No such file or directory\|Failed uploading\|A fatal error occurred\|Upload timeout"; then
+    # Improved failure detection for espota
+    if echo "$upload_output" | grep -q "ERROR\|FAILED\|Connection refused\|Timeout\|No route to host"; then
         echo "FAILED: Node $node_num ($ip) - Attempt $attempt failed"
         return 1
-    elif echo "$upload_output" | grep -q "Uploading.*100%.*Done\|upload port.*network"; then
+    elif echo "$upload_output" | grep -q "Uploading.*100%\|Upload Done"; then
         echo "SUCCESS: Node $node_num ($ip) - Attempt $attempt succeeded"
         return 0
     elif [ $exit_code -eq 0 ]; then
