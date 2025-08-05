@@ -12,11 +12,20 @@ void enterOTAMode() {
   
   if(DEBUG_SERIAL) Serial.println("[OTA] Entering OTA mode - disabling ESP-NOW");
   
-  // Remember if ESP-NOW was active
-  espnowWasActive = esp_now_is_peer_exist(NULL);
+  // Check if ESP-NOW is initialized by trying to get peer count
+  esp_now_peer_num_t peerNum;
+  esp_err_t result = esp_now_get_peer_num(&peerNum);
+  espnowWasActive = (result == ESP_OK && peerNum.total_num > 0);
+  
+  if(DEBUG_SERIAL) {
+    Serial.printf("[OTA] ESP-NOW status: %s (%d peers)\n", 
+      espnowWasActive ? "ACTIVE" : "INACTIVE", 
+      espnowWasActive ? peerNum.total_num : 0);
+  }
   
   // Completely disable ESP-NOW and clear all peers
   if (espnowWasActive) {
+    if(DEBUG_SERIAL) Serial.println("[OTA] Deinitializing ESP-NOW...");
     esp_now_deinit();
   }
   
@@ -54,15 +63,22 @@ bool isInOTAMode() {
   return otaMode;
 }
 
+// Flag to track if OTA has been initialized
+static bool otaInitialized = false;
+
 void initOTA(){
-  // Only initialize OTA if WiFi is connected
-  if (WiFi.status() != WL_CONNECTED) {
-    if(DEBUG_SERIAL) Serial.println("[OTA] Disabled - no WiFi connection");
+  // Check if already initialized
+  if (otaInitialized) {
     return;
   }
   
-  // Enter dedicated OTA mode
-  enterOTAMode();
+  // Only initialize OTA if WiFi is connected
+  if (WiFi.status() != WL_CONNECTED) {
+    if(DEBUG_SERIAL) Serial.println("[OTA] Waiting for WiFi connection...");
+    return;
+  }
+  
+  if(DEBUG_SERIAL) Serial.println("[OTA] WiFi connected - initializing OTA...");
   
   // Create unique hostname using the node's token
   String hostname = "NeoNode-" + String(myToken, HEX);
@@ -80,10 +96,19 @@ void initOTA(){
   setOTACallbacks();
   ArduinoOTA.begin();
   
+  // Mark as initialized
+  otaInitialized = true;
+  
+  // Note: ESP-NOW detection improved, but don't auto-enter OTA mode
+  // OTA mode will be entered only when an actual OTA upload begins
+  if (isESPNowActive() && DEBUG_SERIAL) {
+    Serial.println("[OTA] ESP-NOW detected - OTA mode will activate on upload");
+  }
+  
   if(DEBUG_SERIAL) {
     Serial.printf("[OTA] Initialized: %s.local (IP: %s)\n", 
       hostname.c_str(), WiFi.localIP().toString().c_str());
-    Serial.printf("[OTA] Mode: ACTIVE, ESP-NOW: DISABLED, Timeout: %lus\n", OTA_MODE_TIMEOUT/1000);
+    Serial.printf("[OTA] Mode: READY, Timeout: %lus\n", OTA_MODE_TIMEOUT/1000);
   }
 }
 
@@ -97,6 +122,9 @@ void setOTACallbacks(){
     }
     
     if(DEBUG_SERIAL) Serial.println("[OTA] Starting update: " + type);
+    
+    // Enter OTA mode now that upload is actually starting
+    enterOTAMode();
     
     // Ensure we're in maximum stability mode
     WiFi.setSleep(false);
@@ -250,9 +278,10 @@ void setOTACallbacks(){
 }
 
 bool isESPNowActive(){
-  // Check if ESP-NOW is currently active
-  // This is a simple check - in practice you might track this with a global variable
-  return esp_now_is_peer_exist(NULL); // Returns true if any peers exist
+  // Check if ESP-NOW is currently active by checking peer count
+  esp_now_peer_num_t peerNum;
+  esp_err_t result = esp_now_get_peer_num(&peerNum);
+  return (result == ESP_OK && peerNum.total_num > 0);
 }
 
 void handleOTA(){

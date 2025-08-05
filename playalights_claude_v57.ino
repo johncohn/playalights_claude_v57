@@ -208,6 +208,9 @@ void loop(){
   
   M5.update();
   
+  // Initialize OTA if WiFi becomes available (retry periodically)
+  initOTA();
+  
   // Handle OTA updates (highest priority, but only if WiFi connected)
   handleOTA();
   
