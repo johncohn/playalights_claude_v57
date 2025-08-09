@@ -2,6 +2,9 @@
 #include "version.h" // Include the auto-generated version file
 #include "networking.h" // For forceSyncReset function
 
+// Non-blocking UI timing
+static uint32_t lastUIUpdate = 0;
+
 const char* MODE_NAMES[MODE_COUNT] = {"AUTO","OFF"};
 
 // Define brightness levels - LOCAL CONTROL ONLY
@@ -270,5 +273,11 @@ void drawUI(){
   }
   
   canvas.pushSprite(0, 0);
-  delay(FRAME_DELAY_MS);
+  
+  // Non-blocking frame rate limiting
+  lastUIUpdate = millis();
+}
+
+bool shouldUpdateUI() {
+  return (millis() - lastUIUpdate >= FRAME_DELAY_MS);
 }

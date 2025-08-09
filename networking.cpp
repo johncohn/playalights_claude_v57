@@ -21,7 +21,8 @@ bool wifiConnected = false;
 bool wifiPreviouslyConnected = false;
 uint32_t lastWiFiCheck = 0;
 uint32_t lastWiFiStatusCheck = 0;
-const uint32_t WIFI_CHECK_INTERVAL = 120000; // Check every 2 minutes
+const uint32_t WIFI_CHECK_INTERVAL = 120000; // Check every 2 minutes when connected
+const uint32_t WIFI_CHECK_INTERVAL_DISCONNECTED = 30000; // Check every 30 seconds when disconnected
 const uint32_t WIFI_STATUS_CHECK_INTERVAL = 10000; // Quick status check every 10 seconds
 bool wifiCheckInProgress = false;
 bool wifiJustDisconnected = false;
@@ -132,8 +133,9 @@ void checkWiFiStatusQuickly() {
 void checkWiFiPeriodically() {
   uint32_t now = millis();
   
-  // Only do full WiFi scan/connect every 2 minutes
-  if (now - lastWiFiCheck < WIFI_CHECK_INTERVAL) return;
+  // Use different intervals based on connection status
+  uint32_t checkInterval = wifiConnected ? WIFI_CHECK_INTERVAL : WIFI_CHECK_INTERVAL_DISCONNECTED;
+  if (now - lastWiFiCheck < checkInterval) return;
   if (wifiCheckInProgress) return; // Prevent overlapping checks
   
   // Don't do WiFi scanning if we just disconnected - let things settle

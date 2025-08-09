@@ -7,6 +7,7 @@
 void initUI();
 void handleButtons();
 void drawUI();
+bool shouldUpdateUI();  // Non-blocking UI timing check
 void loadControls();
 void saveControl(Control c);
 void saveGlobalBrightness();

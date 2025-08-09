@@ -58,6 +58,10 @@ const uint32_t WATCHDOG_TIMEOUT = 30000;  // 30 seconds
 uint32_t lastSystemCheck = 0;
 const uint32_t SYSTEM_CHECK_INTERVAL = 5000; // Check system health every 5 seconds
 
+// ── Non-blocking OFF mode timing ──────────────────────────────────────────────
+static uint32_t lastOFFModeUpdate = 0;
+const uint32_t OFF_MODE_UPDATE_INTERVAL = 200; // Update OFF mode every 200ms
+
 void feedWatchdog() {
   lastWatchdogUpdate = millis();
 }
@@ -219,14 +223,17 @@ void loop(){
   
   if(currentMode == OFF) {
     // OFF mode - minimal processing for battery savings
-    drawUI();   // Show OFF status on dimmed display
-    delay(200); // Longer delay to save power
+    uint32_t now = millis();
+    if (now - lastOFFModeUpdate >= OFF_MODE_UPDATE_INTERVAL) {
+      if (shouldUpdateUI()) drawUI();   // Show OFF status on dimmed display
+      lastOFFModeUpdate = now;
+    }
     return;     // Skip all LED/networking processing
   }
   
   // AUTO mode - full functionality
   handleNetworking(); // This handles WiFi transitions gracefully
-  drawUI();
+  if (shouldUpdateUI()) drawUI();  // Non-blocking UI updates
   updateBPM();
   
   // Periodic system health checks
