@@ -11,7 +11,6 @@ struct WiFiNetwork {
 
 WiFiNetwork wifiNetworks[] = {
   {"Barn", "3576wifi"},
-  {"GMA-WIFI_Access_Point", "3576wifi"},
   {"johncohn6s", "j0hnc0hn!"}
 };
 const int numWiFiNetworks = sizeof(wifiNetworks) / sizeof(wifiNetworks[0]);
