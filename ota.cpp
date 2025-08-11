@@ -294,19 +294,36 @@ void handleOTA(){
     return;
   }
   
-  // Check for OTA mode timeout
+  // Check for OTA mode timeout - exit if no upload activity
   if (otaMode && (millis() - otaModeStartTime > OTA_MODE_TIMEOUT)) {
-    if(DEBUG_SERIAL) Serial.println("[OTA] Mode timeout - exiting");
+    if(DEBUG_SERIAL) Serial.println("[OTA] Mode timeout - exiting and re-enabling ESP-NOW");
     exitOTAMode();
     return;
   }
   
-  // Handle OTA operations
-  if (otaMode) {
-    // Warn if ESP-NOW somehow became active (shouldn't happen)
-    if (isESPNowActive() && DEBUG_SERIAL) {
-      Serial.println("[OTA] WARNING: ESP-NOW unexpectedly active!");
+  // Auto-exit OTA mode if it's been active for more than 30 seconds without upload
+  if (otaMode && (millis() - otaModeStartTime > 30000)) {
+    if(DEBUG_SERIAL) Serial.println("[OTA] Auto-exiting OTA mode to restore normal operation");
+    exitOTAMode();
+    return;
+  }
+  
+  // Note: Removed preemptive ESP-NOW disabling as it was too aggressive and froze normal operation
+  
+  // Handle OTA operations - run this always when WiFi is connected
+  ArduinoOTA.handle();
+  
+  // Debug output for OTA status (every 30 seconds)
+  static uint32_t lastOTADebug = 0;
+  uint32_t now = millis();
+  if (now - lastOTADebug > 30000) {
+    lastOTADebug = now;
+    if (otaInitialized && DEBUG_SERIAL) {
+      Serial.printf("[OTA] Status: WiFi=%s, IP=%s, ESP-NOW=%s, OTA Mode=%s\n", 
+        WiFi.status() == WL_CONNECTED ? "OK" : "DISCONNECTED",
+        WiFi.localIP().toString().c_str(),
+        isESPNowActive() ? "ACTIVE" : "INACTIVE",
+        otaMode ? "ACTIVE" : "READY");
     }
-    ArduinoOTA.handle();
   }
 }
