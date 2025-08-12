@@ -33,4 +33,8 @@ void effectWildBG();
 void effectMusic();
 void runTimed(void (*fn)());
 
+// ── Crossfade System ──────────────────────────────────────────────────────────
+void runTimedWithCrossfade(void (*fn)());
+void executePattern(uint8_t patternIndex, CRGB* buffer);
+
 #endif

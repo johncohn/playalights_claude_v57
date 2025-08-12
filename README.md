@@ -2,11 +2,28 @@
 
 A sophisticated distributed LED art installation system using M5StickC Plus2 microcontrollers to create synchronized light shows across multiple nodes. Each node controls 334 WS2812B NeoPixel LEDs with advanced networking, audio reactivity, and individual user control.
 
-## Current Status: Version 1.1.x (Auto-Incrementing)
+## Current Status: Version 1.1.22 (Latest Development)
 
-**Last Updated**: January 2025  
-**Active Nodes**: ~10 devices  
-**Network**: Works with or without WiFi (ESP-NOW mesh priority)
+**Last Updated**: August 2025  
+**Active Nodes**: ~10 devices (OTA system restored and working)  
+**Network**: Works with or without WiFi (ESP-NOW mesh priority)  
+**Recent Focus**: **NEW FEATURE:** Smooth pattern crossfading + OTA system restoration
+
+## 🆕 Recent Major Improvements (v1.1.22)
+
+### ✅ Smooth Pattern Crossfading
+- **3-second crossfade transitions** between patterns instead of abrupt changes
+- **Dual pattern rendering** - both old and new patterns run simultaneously during transition
+- **Ease-in-out blending curve** for professional-quality visual transitions
+- **Music reactivity preserved** during crossfade periods
+- **Synchronized across all nodes** - leader controls crossfade timing
+
+### ✅ OTA System Restoration
+- **Simplified v56-style OTA** - removed complex mode management that was causing failures
+- **ESP-NOW conflict resolution** - proper shutdown sequence during OTA uploads
+- **Reliable wireless updates** - tested and working across all nodes
+- **Partition corruption recovery** - full flash erase capability for corrupted devices
+- **Authentication working** - "neopixel123" password system functional
 
 ## System Architecture
 
@@ -59,7 +76,8 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 - **Leader Only**: Generates patterns with audio reactivity baked into LED colors
 - **Music Mode**: When audio detected, `effectMusic()` scales LED colors by `musicLevel` (dramatic nearly-off to full-bright response)
 - **Background Mode**: Normal patterns when no audio detected
-- **Timed Advance**: Automatic pattern cycling every few seconds (configurable)
+- **Extended Timing**: Automatic pattern cycling every 15 seconds (3x longer than original 5 seconds)
+- **✅ NEW: Crossfade System**: 3-second smooth transitions between patterns with both patterns running simultaneously
 - **Full Brightness Broadcast**: Leader sends 100% brightness data, each node applies local scaling
 
 ## Audio Reactivity
@@ -110,14 +128,15 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 - **ota.cpp/.h**: Over-the-air update functionality with ESP-NOW conflict resolution
 - **version.h**: Auto-generated version information
 
-### Smart Deployment System
-- **nodes.txt File**: Maintains list of node IP addresses
-- **Auto-Discovery**: Network scanning for responsive devices
+### Smart Deployment System  
+- **nodes.txt File**: Maintains list of node IP addresses (currently 10 active nodes)
+- **Auto-Discovery**: Network scanning for responsive devices (optional)
 - **Smart Caching**: Only recompiles when source files change
 - **Version Management**: Auto-incrementing version numbers with each compile
 - **Retry Logic**: Up to 3 attempts per failed node with detailed reporting
 - **Parallel Deployment**: OTA updates to multiple nodes simultaneously
-- **Compile-Only Mode**: Fast incremental builds with version bumping, no deployment needed
+- **USB Automation**: `usb_simple.sh` for batch USB updates when OTA fails
+- **✅ FIXED: OTA System**: Restored to v56-style simple implementation, ESP-NOW conflicts resolved
 
 ### Deployment Options
 1. **Deploy** (compile if needed + upload with retries) [DEFAULT]
@@ -134,32 +153,35 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 ```
 
 ## Current Node Configuration
-- **Active Nodes**: ~10 devices on network 192.168.0.x
-- **Known IPs**: 140, 141, 148, 150, 180, 113, 122, 236, 238, etc.
-- **OTA Password**: "neopixel123"
+- **Active Nodes**: 10 devices on network 192.168.0.x
+- **Current IPs**: 113, 122, 140, 141, 142, 148, 150, 181, 236, 238
+- **OTA Password**: "neopixel123"  
 - **Default Brightness**: 25% (64/255) per node
-- **WiFi Networks**: Barn, GMA-WIFI_Access_Point, phone hotspot
+- **WiFi Networks**: Barn, johncohn6s (GMA-WIFI removed)
+- **Firmware Status**: All nodes updated to v1.1.7 with OTA fixes via USB deployment
 
 ## Key Features Working ✅
 - ✅ Distributed leader election with automatic failover
-- ✅ 22 diverse LED patterns with smooth transitions
+- ✅ 22 diverse LED patterns with extended 15-second duration
 - ✅ Synchronized music reactivity across all nodes (dramatic response restored)
 - ✅ Individual brightness control (6%-100% + OFF)
 - ✅ Robust ESP-NOW networking with chunk validation
-- ✅ OTA deployment system with retry logic and version management
+- ✅ OTA deployment system with ESP-NOW conflict resolution (fixed August 2025)
 - ✅ Audio-responsive brightness scaling with full dynamic range
 - ✅ Comprehensive LCD UI with status indicators and version display
 - ✅ Watchdog timer and error recovery systems
 - ✅ Multi-WiFi support with clean offline operation
 - ✅ Fast incremental compilation with smart caching
+- ✅ USB batch update automation for emergency deployments
 
-## Recent Major Fixes
-- **Offline Operation**: ESP-NOW mesh works perfectly without WiFi, no blocking delays
-- **Audio Response**: Restored dramatic nearly-off to full-bright music reactivity
-- **WiFi Transitions**: Clean handling of WiFi connect/disconnect without ESP-NOW interference
-- **Deployment Reliability**: Retry logic for failed uploads, better leader node OTA handling
-- **Version Management**: Auto-incrementing version display on all nodes
-- **Build Performance**: Smart caching for fast incremental compiles
+## Recent Major Fixes & Updates (August 2025)
+- **OTA System Restoration**: Fixed ESP-NOW interference causing OTA upload failures
+- **Pattern Duration Extension**: Patterns now run 15 seconds instead of 5 seconds (3x longer)
+- **USB Deployment Automation**: Created `usb_simple.sh` for efficient batch USB updates
+- **Board Configuration Fix**: Corrected FQBN from m5stack_core to m5stack_stickc_plus2
+- **All Nodes Updated**: Successfully deployed v1.1.7 to all 10 nodes via USB
+- **Network List Updates**: Removed GMA-WIFI, updated active node IP addresses
+- **Deployment Script Improvements**: Enhanced error handling and connectivity testing
 
 ## Usage Workflow
 
@@ -169,9 +191,13 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 ./deploy_nodes.sh    # Choose option 4: Compile only
 # → Fast incremental build, version bump, ready for deployment
 
-# When ready to deploy
-./deploy_nodes.sh    # Choose option 3: Upload only  
-# → Uses cached build, deploys with retry logic
+# When ready for OTA deployment
+./deploy_nodes.sh    # Choose option 1: Deploy (or 3: Upload only)
+# → Uses cached build, deploys with retry logic to nodes.txt IPs
+
+# For emergency/initial deployment via USB
+./usb_simple.sh     # Interactive USB deployment
+# → Compile once, then upload to each node via USB cable
 ```
 
 ### Operation

@@ -118,7 +118,7 @@ upload_to_node() {
     echo "Uploading to Node $node_num ($ip) - Attempt $attempt/$MAX_RETRIES..."
     
     # Find the compiled binary
-    local binary_file="$BUILD_DIR/playalights_claude_v57.ino.bin"
+    local binary_file="$BUILD_DIR/playalights_claude_v58.ino.bin"
     if [ ! -f "$binary_file" ]; then
         echo "   Node $node_num (Attempt $attempt): Binary file not found: $binary_file"
         echo "FAILED: Node $node_num ($ip) - Attempt $attempt failed (no binary)"
@@ -259,26 +259,11 @@ EOF
         fi
     done < "$node_file"
     
-    echo "Found ${#file_nodes[@]} IPs in $node_file, testing connectivity..."
+    echo "Found ${#file_nodes[@]} IPs in $node_file"
     
-    # Test connectivity to each IP
-    for ip in "${file_nodes[@]}"; do
-        echo -n "Testing $ip... "
-        if ping -c 1 -W 2000 "$ip" >/dev/null 2>&1; then
-            working_nodes+=("$ip")
-            echo "ONLINE"
-        else
-            echo "OFFLINE"
-        fi
-    done
-    
-    NODES=("${working_nodes[@]}")
-    echo "Ready to deploy to ${#NODES[@]}/${#file_nodes[@]} online nodes"
-    
-    if [ ${#NODES[@]} -eq 0 ]; then
-        echo "No nodes are online. Check your $node_file and network connectivity."
-        exit 1
-    fi
+    # Use all nodes from file, skipping ping test for faster deployment
+    NODES=("${file_nodes[@]}")
+    echo "Ready to deploy to ${#NODES[@]} nodes from $node_file (skipping connectivity test)"
 }
 
 # Function to add known nodes (legacy fallback)

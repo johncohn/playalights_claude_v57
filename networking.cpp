@@ -29,11 +29,7 @@ bool wifiJustDisconnected = false;
 void initNetworking(){
   if(DEBUG_SERIAL) Serial.println("Initializing ESP-NOW (priority)...");
   
-  // Check if we're in OTA mode - don't initialize ESP-NOW if so
-  if (isInOTAMode()) {
-    if(DEBUG_SERIAL) Serial.println("[NET] Skipping ESP-NOW init - OTA mode active");
-    return;
-  }
+  // ESP-NOW initialization - no OTA mode checks needed in v56 style
   
   // CRITICAL: Initialize ESP-NOW FIRST with no delays
   WiFi.mode(WIFI_STA);
@@ -290,10 +286,7 @@ void handleNetworking(){
   
   if(currentMode != AUTO) return;
   
-  // Skip networking operations if in OTA mode
-  if (isInOTAMode()) {
-    return;
-  }
+  // No OTA mode checks needed - v56 style handles OTA gracefully
   
   // Check WiFi status quickly and frequently (non-blocking)
   checkWiFiStatusQuickly();
@@ -396,8 +389,8 @@ void handleNetworking(){
         else             effectWildBG();
       } else {
         detectAudioFrame();
-        if(audioDetected) runTimed(effectMusic);
-        else             runTimed(effectWildBG);
+        if(audioDetected) runTimedWithCrossfade(effectMusic);
+        else             runTimedWithCrossfade(effectWildBG);
       }
       
       // Send the LED data with music reactivity baked into the colors at FULL brightness

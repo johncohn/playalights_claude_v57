@@ -650,10 +650,135 @@ void effectMusic(){
 
 void runTimed(void (*fn)()){
   static uint32_t lastT=0;
-  uint32_t now=millis(), d=getTi()*5000;
+  uint32_t now=millis(), d=getTi()*15000;
   if(d==0||now-lastT>=d){ 
     styleIdx=(styleIdx+1)%22; 
     lastT=now; 
   }
   fn();
+}
+
+// ── Crossfade System Implementation ───────────────────────────────────────────
+void executePattern(uint8_t patternIndex, CRGB* buffer) {
+  // First clear the buffer
+  memset(buffer, 0, sizeof(CRGB) * NUM_LEDS);
+  
+  // Store original styleIdx
+  uint8_t originalStyleIdx = styleIdx;
+  styleIdx = patternIndex;
+  
+  // Execute the specific pattern directly into the buffer
+  switch(patternIndex) {
+    case 0: styleRainbow(getSpeed());      break;
+    case 1: styleChase(getSpeed());        break;
+    case 2: styleJuggle(getSpeed());       break;
+    case 3: styleRainbowGlitter(getSpeed()); break;
+    case 4: styleConfetti(getSpeed());     break;
+    case 5: styleBPM(getSpeed());          break;
+    case 6: styleFire(getSpeed());         break;
+    case 7: styleColorWheel(getSpeed());   break;
+    case 8: styleRandom(getSpeed());       break;
+    case 9: stylePulseWave(getSpeed());    break;
+    case 10: styleMeteorShower(getSpeed()); break;
+    case 11: styleColorSpiral(getSpeed());  break;
+    case 12: stylePlasmaField(getSpeed());  break;
+    case 13: styleSparkleStorm(getSpeed()); break;
+    case 14: styleAuroraWaves(getSpeed());  break;
+    case 15: styleOrganicFlow(getSpeed());  break;
+    case 16: styleWaveCollapse(getSpeed()); break;
+    case 17: styleColorDrift(getSpeed());   break;
+    case 18: styleLiquidRainbow(getSpeed()); break;
+    case 19: styleSineBreath(getSpeed());   break;
+    case 20: styleFractalNoise(getSpeed()); break;
+    case 21: styleRainbowStrobe(getSpeed()); break;
+  }
+  
+  // Copy the results from leds to our buffer
+  memcpy(buffer, leds, sizeof(CRGB) * NUM_LEDS);
+  
+  // Restore original styleIdx
+  styleIdx = originalStyleIdx;
+}
+
+void runTimedWithCrossfade(void (*fn)()){
+  static uint32_t lastPatternChange = 0;
+  static uint32_t crossfadeStartTime = 0;
+  static uint8_t currentPattern = 0;
+  static uint8_t nextPattern = 1;
+  static bool inCrossfade = false;
+  static CRGB buffer1[NUM_LEDS];
+  static CRGB buffer2[NUM_LEDS];
+  static bool firstRun = true;
+  
+  uint32_t now = millis();
+  uint32_t patternDuration = getTi() * 15000; // 15 second patterns
+  const uint32_t CROSSFADE_DURATION = 3000;   // 3 second crossfade
+  
+  // Initialize on first run
+  if(firstRun) {
+    lastPatternChange = now;
+    currentPattern = styleIdx;
+    nextPattern = (currentPattern + 1) % 22;
+    firstRun = false;
+  }
+  
+  // Check if it's time to start a crossfade
+  if(!inCrossfade && (patternDuration == 0 || now - lastPatternChange >= (patternDuration - CROSSFADE_DURATION))) {
+    inCrossfade = true;
+    crossfadeStartTime = now;
+    nextPattern = (currentPattern + 1) % 22;
+  }
+  
+  if(inCrossfade) {
+    uint32_t crossfadeElapsed = now - crossfadeStartTime;
+    
+    if(crossfadeElapsed >= CROSSFADE_DURATION) {
+      // Crossfade complete - switch to next pattern
+      inCrossfade = false;
+      currentPattern = nextPattern;
+      styleIdx = currentPattern;
+      lastPatternChange = now;
+      
+      // Run the new current pattern normally
+      fn();
+    } else {
+      // We're in crossfade - blend both patterns
+      float crossfadeProgress = (float)crossfadeElapsed / CROSSFADE_DURATION;
+      
+      // Generate current pattern in buffer1
+      executePattern(currentPattern, buffer1);
+      
+      // Generate next pattern in buffer2  
+      executePattern(nextPattern, buffer2);
+      
+      // Blend the two patterns into the main leds array
+      for(int i = 0; i < NUM_LEDS; i++) {
+        // Smooth crossfade using ease-in-out curve
+        float blend = crossfadeProgress * crossfadeProgress * (3.0f - 2.0f * crossfadeProgress);
+        
+        leds[i].r = (uint8_t)(buffer1[i].r * (1.0f - blend) + buffer2[i].r * blend);
+        leds[i].g = (uint8_t)(buffer1[i].g * (1.0f - blend) + buffer2[i].g * blend);
+        leds[i].b = (uint8_t)(buffer1[i].b * (1.0f - blend) + buffer2[i].b * blend);
+      }
+      
+      // Apply music effect if this is the music function
+      if(fn == effectMusic) {
+        // Apply music scaling to the blended result
+        if(musicLevel > 0.1f) {
+          uint8_t musicScale = uint8_t(musicLevel * 255);
+          for(int i = 0; i < NUM_LEDS; i++) {
+            leds[i].nscale8(musicScale);
+          }
+        } else {
+          for(int i = 0; i < NUM_LEDS; i++) {
+            leds[i].nscale8(32); // About 12% brightness as minimum
+          }
+        }
+      }
+    }
+  } else {
+    // Not in crossfade - run pattern normally
+    styleIdx = currentPattern;
+    fn();
+  }
 }
