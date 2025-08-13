@@ -1,6 +1,6 @@
 /*
   NeoPixel Controller - Modular Version with OTA
-  22 patterns with robust networking, audio, UI, and OTA updates
+  42 patterns with robust networking, audio, UI, and OTA updates
   Refactored into manageable modules
   
   ** SERIAL DEBUG OUTPUT SIGNIFICANTLY REDUCED **
@@ -41,6 +41,12 @@ uint32_t electionStart     = 0, electionEnd    = 0;
 uint32_t myToken           = 0, highestTokenSeen = 0, myDelay = 0;
 bool     electionBroadcasted = false;
 uint32_t lastTokenBroadcast  = 0, lastHeartbeat      = 0, missedFrameCount   = 0;
+
+// ── OTA Coordination Variables ───────────────────────────────────────────────
+bool     otaSuspended        = true;   // Start suspended - assume OTA in progress
+uint32_t otaSuspendTimeout   = 0;
+uint32_t otaSuspendDuration  = 300000; // 5 minutes default timeout
+uint32_t bootupQuietTime     = 60000;  // Stay quiet for 60s after boot
 
 // ── Audio Variables ───────────────────────────────────────────────────────────
 float   soundMin      = 1.0f, soundMax      = 0.0f, musicLevel = 0.0f;
@@ -182,8 +188,15 @@ void setup(){
   fill_solid(leds, NUM_LEDS, CRGB::Black);
   FastLED.show();
   
+  // OTA Coordination: Start in suspended mode to prevent interference
+  // Recently updated nodes should stay quiet until timeout or resume signal
+  otaSuspendTimeout = millis() + bootupQuietTime;
   if(DEBUG_SERIAL) {
-    Serial.printf("NeoPixel Controller v%s initialized - 22 patterns ready!\n", FIRMWARE_VERSION);
+    Serial.printf("[OTA] Boot quiet mode: %lu ms (prevents OTA interference)\n", bootupQuietTime);
+  }
+  
+  if(DEBUG_SERIAL) {
+    Serial.printf("NeoPixel Controller v%s initialized - 42 patterns ready!\n", FIRMWARE_VERSION);
     Serial.printf("Ready for OTA updates at: NeoNode-%06X.local\n", myToken);
     Serial.println("Watchdog timer enabled (30s timeout)");
     Serial.printf("Local brightness: %d/255 (%.1f%%) - each node controls its own\n", 

@@ -145,7 +145,7 @@ void handleButtons(){
       freezeActive = true;
       if(DEBUG_SERIAL) Serial.println("Pattern freeze ON");
     } else {
-      styleIdx = (styleIdx + 1) % 22;
+      styleIdx = (styleIdx + 1) % 42;
       if(DEBUG_SERIAL) {
         Serial.printf("Pattern advance → %s [frozen]\n", STYLE_NAMES[styleIdx]);
       }

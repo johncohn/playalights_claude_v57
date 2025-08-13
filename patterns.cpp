@@ -1,13 +1,19 @@
 #include "patterns.h"
 
 // ── Names ─────────────────────────────────────────────────────────────────────
-const char* STYLE_NAMES[22] = {
+const char* STYLE_NAMES[42] = {
   "Rainbow","Chase","Juggle","Rainbow+Glitter",
   "Confetti","BPM","Fire","Color Wheel","Random",
   "Pulse Wave","Meteor Shower","Color Spiral","Plasma Field",
   "Sparkle Storm","Aurora Waves","Organic Flow","Wave Collapse",
   "Color Drift","Liquid Rainbow","Sine Breath","Fractal Noise",
-  "Rainbow Strobe"
+  "Rainbow Strobe",
+  // NEW PATTERNS (22-41)
+  "Twinkle Stars","Rainbow Ripples","DNA Helix","Neon Pulse",
+  "Digital Rain","Plasma Balls","Lightning Storm","Kaleidoscope",
+  "Candle Flicker","Color Drips","Galaxy Spiral","Prism",
+  "Heartbeat","Aurora Boreal","Matrix Code","Crystal Cave",
+  "Lava Flow","Waveform","Rainbow2","Confetti2"
 };
 
 // ── Basic Pattern Functions ───────────────────────────────────────────────────
@@ -574,15 +580,15 @@ void styleRainbowStrobe(uint8_t sp){
   static uint8_t strobe_counter = 0;
   static bool strobe_on = true;
   
-  // ULTRA fast strobe rate for maximum persistence of vision effect
-  uint8_t strobeSpeed = map(sp, 0, 9, 60, 160);  // 4x faster than before!
+  // Moderate strobe rate to prevent system overload and reboots
+  uint8_t strobeSpeed = map(sp, 0, 9, 15, 40);  // Reduced from extreme values
   strobe_counter += strobeSpeed;
   
-  // Advance hue extremely rapidly - about 80Hz color changes
-  hue += map(sp, 0, 9, 32, 80); // 4x faster hue advancement
+  // Moderate hue advancement - about 20Hz color changes
+  hue += map(sp, 0, 9, 8, 20); // Reduced from extreme values
   
-  // Toggle strobe state extremely rapidly - about 80Hz
-  if(strobe_counter > 16) { // 4x faster strobe frequency
+  // Toggle strobe state at moderate frequency - about 20Hz
+  if(strobe_counter > 32) { // Slower strobe to prevent reboots
     strobe_counter = 0;
     strobe_on = !strobe_on;
   }
@@ -621,6 +627,27 @@ void effectWild(){
     case 19: styleSineBreath(getSpeed());   break;
     case 20: styleFractalNoise(getSpeed()); break;
     case 21: styleRainbowStrobe(getSpeed()); break;
+    // NEW PATTERNS (20 additional patterns)
+    case 22: styleTwinkleStars(getSpeed()); break;
+    case 23: styleRainbowRipples(getSpeed()); break;
+    case 24: styleDNAHelix(getSpeed()); break;
+    case 25: styleNeonPulse(getSpeed()); break;
+    case 26: styleDigitalRain(getSpeed()); break;
+    case 27: stylePlasmaBalls(getSpeed()); break;
+    case 28: styleLightningStorm(getSpeed()); break;
+    case 29: styleKaleidoscope(getSpeed()); break;
+    case 30: styleCandleFlicker(getSpeed()); break;
+    case 31: styleColorDrips(getSpeed()); break;
+    case 32: styleGalaxySpiral(getSpeed()); break;
+    case 33: stylePrism(getSpeed()); break;
+    case 34: styleHeartbeat(getSpeed()); break;
+    case 35: styleAuroraBoreal(getSpeed()); break;
+    case 36: styleMatrixCode(getSpeed()); break;
+    case 37: styleCrystalCave(getSpeed()); break;
+    case 38: styleLavaFlow(getSpeed()); break;
+    case 39: styleWaveform(getSpeed()); break;
+    case 40: styleRainbow(getSpeed()); break; // Safe duplicate of pattern 0
+    case 41: styleConfetti(getSpeed()); break; // Safe duplicate of pattern 4
   }
 }
 
@@ -648,11 +675,333 @@ void effectMusic(){
   }
 }
 
+// ── NEW PATTERNS: Inspired by Pixelblaze Community ──────────────────────────
+// stylePerlinWaves removed due to system crashes - too computationally intensive
+
+void styleTwinkleStars(uint8_t sp) {
+  static uint8_t density = 80;
+  if (random8() < density) {
+    leds[random16(NUM_LEDS)] += CHSV(random8(), 255, random8(100, 255));
+  }
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i].nscale8(250 - sp / 4); // Fade based on speed
+  }
+}
+
+void styleRainbowRipples(uint8_t sp) {
+  static uint8_t center = NUM_LEDS / 2;
+  static uint8_t step = 0;
+  
+  if (step == 0) {
+    center = random8(NUM_LEDS);
+    step = 1;
+  }
+  
+  for (int i = 0; i < NUM_LEDS; i++) {
+    uint8_t distance = abs(i - center);
+    uint8_t brightness = sin8(distance * 8 - millis() / (20 - sp / 15));
+    leds[i] = CHSV((distance * 4 + millis() / 100) % 255, 255, brightness);
+  }
+  
+  if (millis() % 3000 < 50) step = 0; // New ripple every 3 seconds
+}
+
+void styleDNAHelix(uint8_t sp) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    uint8_t angle1 = (millis() / (30 - sp / 10) + i * 8) % 255;
+    uint8_t angle2 = (millis() / (30 - sp / 10) + i * 8 + 128) % 255;
+    uint8_t bright1 = sin8(angle1);
+    uint8_t bright2 = sin8(angle2);
+    
+    CRGB color1 = CHSV(160, 255, bright1); // Cyan strand
+    CRGB color2 = CHSV(0, 255, bright2);   // Red strand
+    leds[i] = color1 + color2;
+  }
+}
+
+void styleNeonPulse(uint8_t sp) {
+  static uint8_t hue = 0;
+  uint8_t beat = sin8(millis() / (50 - sp / 6));
+  
+  for (int i = 0; i < NUM_LEDS; i++) {
+    uint8_t brightness = qadd8(beat, sin8(i * 4 + millis() / 100));
+    leds[i] = CHSV(hue, 200, brightness);
+  }
+  hue += 1;
+}
+
+void styleDigitalRain(uint8_t sp) {
+  // Fade all pixels
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i].nscale8(240);
+  }
+  
+  // Add new "drops"
+  if (random8() < sp / 2) {
+    leds[random8(NUM_LEDS / 4)] = CHSV(96, 255, 255); // Bright green
+  }
+  
+  // Rain effect - move pixels down
+  static uint32_t lastMove = 0;
+  if (millis() - lastMove > (100 - sp)) {
+    for (int i = NUM_LEDS - 1; i > 0; i--) {
+      if (leds[i-1].g > leds[i].g) {
+        leds[i] = leds[i-1];
+        leds[i-1].nscale8(200);
+      }
+    }
+    lastMove = millis();
+  }
+}
+
+void stylePlasmaBalls(uint8_t sp) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    uint8_t x = i;
+    uint8_t t = millis() / (30 - sp / 10);
+    
+    uint8_t plasma = sin8(x * 16 + t) + 
+                    sin8(x * 23 + t * 2) + 
+                    sin8(x * 33 + t * 3);
+    
+    uint8_t hue = plasma / 3 + millis() / 200;
+    leds[i] = CHSV(hue, 255, plasma);
+  }
+}
+
+void styleLightningStorm(uint8_t sp) {
+  // Fade to dark blue background
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = CHSV(160, 255, 20);
+    leds[i].nscale8(200);
+  }
+  
+  // Random lightning strikes
+  if (random8() < (sp / 10 + 2)) {
+    uint8_t strike_pos = random8(NUM_LEDS - 20);
+    uint8_t strike_len = random8(5, 20);
+    
+    for (int i = strike_pos; i < strike_pos + strike_len && i < NUM_LEDS; i++) {
+      leds[i] = CHSV(0, 0, 255); // Bright white
+    }
+  }
+}
+
+void styleKaleidoscope(uint8_t sp) {
+  static uint8_t offset = 0;
+  uint8_t center = NUM_LEDS / 2;
+  
+  for (int i = 0; i < center; i++) {
+    uint8_t hue = (i * 8 + offset) % 255;
+    uint8_t brightness = sin8(i * 16 + millis() / (40 - sp / 8));
+    CRGB color = CHSV(hue, 255, brightness);
+    
+    leds[i] = color;
+    leds[NUM_LEDS - 1 - i] = color; // Mirror effect
+  }
+  offset += sp / 20;
+}
+
+void styleCandleFlicker(uint8_t sp) {
+  uint8_t base_hue = 20; // Warm orange
+  
+  for (int i = 0; i < NUM_LEDS; i++) {
+    uint8_t flicker = random8(180, 255);
+    uint8_t hue_variation = base_hue + random8(20) - 10;
+    leds[i] = CHSV(hue_variation, 255, flicker);
+  }
+  
+  // Occasional brighter flickers
+  if (random8() < (sp / 5 + 10)) {
+    leds[random8(NUM_LEDS)] = CHSV(base_hue, 200, 255);
+  }
+}
+
+void styleColorDrips(uint8_t sp) {
+  // Fade all pixels
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i].nscale8(250);
+  }
+  
+  // Add new drips from top
+  if (random8() < (sp / 3 + 20)) {
+    leds[0] = CHSV(random8(), 255, 255);
+  }
+  
+  // Move drips down
+  static uint32_t lastMove = 0;
+  if (millis() - lastMove > (150 - sp * 2)) {
+    for (int i = NUM_LEDS - 1; i > 0; i--) {
+      if (leds[i-1].r + leds[i-1].g + leds[i-1].b > 30) {
+        leds[i] = leds[i-1];
+        leds[i-1].nscale8(220);
+      }
+    }
+    lastMove = millis();
+  }
+}
+
+void styleGalaxySpiral(uint8_t sp) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    uint8_t angle = (i * 4 + millis() / (60 - sp / 5)) % 255;
+    uint8_t radius = i * 255 / NUM_LEDS;
+    
+    uint8_t brightness = sin8(angle) * sin8(radius) / 255;
+    uint8_t hue = angle / 2 + radius / 4;
+    
+    leds[i] = CHSV(hue, 255, brightness);
+  }
+}
+
+void stylePrism(uint8_t sp) {
+  static uint8_t rotation = 0;
+  
+  for (int i = 0; i < NUM_LEDS; i++) {
+    uint8_t segment = (i * 6) / NUM_LEDS; // 6 color segments
+    uint8_t hue = (segment * 42 + rotation) % 255; // Spread across spectrum
+    uint8_t brightness = sin8((i * 8 + millis() / (30 - sp / 10)) % 255);
+    
+    leds[i] = CHSV(hue, 255, brightness);
+  }
+  rotation += sp / 30;
+}
+
+void styleHeartbeat(uint8_t sp) {
+  static uint32_t lastBeat = 0;
+  static bool inBeat = false;
+  uint32_t now = millis();
+  
+  uint32_t beatInterval = 1200 - sp * 8; // Speed affects heart rate
+  
+  if (now - lastBeat > beatInterval) {
+    lastBeat = now;
+    inBeat = true;
+  }
+  
+  uint8_t brightness = 0;
+  if (inBeat) {
+    uint32_t beatProgress = now - lastBeat;
+    if (beatProgress < 100) {
+      brightness = sin8(beatProgress * 255 / 100);
+    } else if (beatProgress < 200) {
+      brightness = sin8((beatProgress - 100) * 255 / 100) / 3;
+    } else {
+      inBeat = false;
+    }
+  }
+  
+  fill_solid(leds, NUM_LEDS, CHSV(0, 255, brightness)); // Red heartbeat
+}
+
+void styleAuroraBoreal(uint8_t sp) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    uint8_t x = i * 255 / NUM_LEDS;
+    uint8_t t = millis() / (100 - sp);
+    
+    uint8_t green = inoise8(x, t) / 2 + 127;
+    uint8_t blue = inoise8(x + 1000, t + 1000) / 3 + 85;
+    
+    leds[i] = CRGB(0, green, blue);
+  }
+  
+  // Add occasional bright streaks
+  if (random8() < (sp / 10 + 5)) {
+    uint8_t streak_pos = random8(NUM_LEDS - 10);
+    for (int i = 0; i < 8; i++) {
+      if (streak_pos + i < NUM_LEDS) {
+        leds[streak_pos + i] += CRGB(random8(50), random8(100, 255), random8(100, 200));
+      }
+    }
+  }
+}
+
+void styleMatrixCode(uint8_t sp) {
+  // Fade background
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i].nscale8(230);
+  }
+  
+  // Add falling code streams
+  static uint8_t streams[10] = {255, 255, 255, 255, 255, 255, 255, 255, 255, 255};
+  static uint32_t lastUpdate = 0;
+  
+  if (millis() - lastUpdate > (200 - sp * 2)) {
+    for (int s = 0; s < 10; s++) {
+      if (streams[s] == 255) {
+        if (random8() < 50) {
+          streams[s] = 0; // Start new stream
+        }
+      } else {
+        uint8_t pos = streams[s] * NUM_LEDS / 255;
+        if (pos < NUM_LEDS) {
+          leds[pos] = CHSV(96, 255, 255); // Bright green
+          if (pos > 0) leds[pos-1] = CHSV(96, 255, 150);
+          if (pos > 1) leds[pos-2] = CHSV(96, 255, 80);
+        }
+        
+        streams[s] += 20;
+        if (streams[s] > 255 + 50) streams[s] = 255; // Reset stream
+      }
+    }
+    lastUpdate = millis();
+  }
+}
+
+void styleCrystalCave(uint8_t sp) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    uint16_t noise1 = inoise16(i * 60, millis() / (40 - sp / 8));
+    uint16_t noise2 = inoise16(i * 80 + 5000, millis() / (60 - sp / 6));
+    
+    uint8_t brightness = (noise1 + noise2) / 512;
+    uint8_t hue = 160 + (noise1 / 1000); // Blue to cyan range
+    
+    leds[i] = CHSV(hue, 200, brightness);
+  }
+  
+  // Add sparkle effect
+  if (random8() < (sp / 8 + 10)) {
+    leds[random8(NUM_LEDS)] += CRGB(100, 100, 255);
+  }
+}
+
+void styleLavaFlow(uint8_t sp) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    uint8_t heat = inoise8(i * 40, millis() / (80 - sp));
+    
+    // Create lava colors (black -> red -> orange -> yellow -> white)
+    CRGB color;
+    if (heat < 128) {
+      color = CRGB(heat * 2, 0, 0); // Black to red
+    } else {
+      uint8_t excess = heat - 128;
+      color = CRGB(255, excess * 2, excess / 4); // Red to orange to yellow
+    }
+    
+    leds[i] = color;
+  }
+}
+
+void styleWaveform(uint8_t sp) {
+  static uint8_t phase = 0;
+  
+  for (int i = 0; i < NUM_LEDS; i++) {
+    uint8_t wave1 = sin8(i * 8 + phase);
+    uint8_t wave2 = sin8(i * 12 + phase * 2);
+    uint8_t wave3 = sin8(i * 16 + phase * 3);
+    
+    uint8_t combined = (wave1 + wave2 + wave3) / 3;
+    uint8_t hue = i * 255 / NUM_LEDS + phase;
+    
+    leds[i] = CHSV(hue, 255, combined);
+  }
+  
+  phase += sp / 8;
+}
+
 void runTimed(void (*fn)()){
   static uint32_t lastT=0;
   uint32_t now=millis(), d=getTi()*15000;
   if(d==0||now-lastT>=d){ 
-    styleIdx=(styleIdx+1)%22; 
+    styleIdx=(styleIdx+1)%42; 
     lastT=now; 
   }
   fn();
@@ -691,6 +1040,27 @@ void executePattern(uint8_t patternIndex, CRGB* buffer) {
     case 19: styleSineBreath(getSpeed());   break;
     case 20: styleFractalNoise(getSpeed()); break;
     case 21: styleRainbowStrobe(getSpeed()); break;
+    // NEW PATTERNS (20 additional patterns)
+    case 22: styleTwinkleStars(getSpeed()); break;
+    case 23: styleRainbowRipples(getSpeed()); break;
+    case 24: styleDNAHelix(getSpeed()); break;
+    case 25: styleNeonPulse(getSpeed()); break;
+    case 26: styleDigitalRain(getSpeed()); break;
+    case 27: stylePlasmaBalls(getSpeed()); break;
+    case 28: styleLightningStorm(getSpeed()); break;
+    case 29: styleKaleidoscope(getSpeed()); break;
+    case 30: styleCandleFlicker(getSpeed()); break;
+    case 31: styleColorDrips(getSpeed()); break;
+    case 32: styleGalaxySpiral(getSpeed()); break;
+    case 33: stylePrism(getSpeed()); break;
+    case 34: styleHeartbeat(getSpeed()); break;
+    case 35: styleAuroraBoreal(getSpeed()); break;
+    case 36: styleMatrixCode(getSpeed()); break;
+    case 37: styleCrystalCave(getSpeed()); break;
+    case 38: styleLavaFlow(getSpeed()); break;
+    case 39: styleWaveform(getSpeed()); break;
+    case 40: styleRainbow(getSpeed()); break; // Safe duplicate of pattern 0
+    case 41: styleConfetti(getSpeed()); break; // Safe duplicate of pattern 4
   }
   
   // Copy the results from leds to our buffer
@@ -718,7 +1088,7 @@ void runTimedWithCrossfade(void (*fn)()){
   if(firstRun) {
     lastPatternChange = now;
     currentPattern = styleIdx;
-    nextPattern = (currentPattern + 1) % 22;
+    nextPattern = (currentPattern + 1) % 42;
     firstRun = false;
   }
   
@@ -726,7 +1096,7 @@ void runTimedWithCrossfade(void (*fn)()){
   if(!inCrossfade && (patternDuration == 0 || now - lastPatternChange >= (patternDuration - CROSSFADE_DURATION))) {
     inCrossfade = true;
     crossfadeStartTime = now;
-    nextPattern = (currentPattern + 1) % 22;
+    nextPattern = (currentPattern + 1) % 42;
   }
   
   if(inCrossfade) {

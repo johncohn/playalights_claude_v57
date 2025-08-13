@@ -27,6 +27,26 @@ void styleSineBreath(uint8_t sp);
 void styleFractalNoise(uint8_t sp);
 void styleRainbowStrobe(uint8_t sp);
 
+// ── NEW PATTERNS: Inspired by Pixelblaze Community ──────────────────────────
+void styleTwinkleStars(uint8_t sp);
+void styleRainbowRipples(uint8_t sp);
+void styleDNAHelix(uint8_t sp);
+void styleNeonPulse(uint8_t sp);
+void styleDigitalRain(uint8_t sp);
+void stylePlasmaBalls(uint8_t sp);
+void styleLightningStorm(uint8_t sp);
+void styleKaleidoscope(uint8_t sp);
+void styleCandleFlicker(uint8_t sp);
+void styleColorDrips(uint8_t sp);
+void styleGalaxySpiral(uint8_t sp);
+void stylePrism(uint8_t sp);
+void styleHeartbeat(uint8_t sp);
+void styleAuroraBoreal(uint8_t sp);
+void styleMatrixCode(uint8_t sp);
+void styleCrystalCave(uint8_t sp);
+void styleLavaFlow(uint8_t sp);
+void styleWaveform(uint8_t sp);
+
 // ── Effect Control Functions ──────────────────────────────────────────────────
 void effectWild();
 void effectWildBG();

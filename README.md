@@ -2,14 +2,14 @@
 
 A sophisticated distributed LED art installation system using M5StickC Plus2 microcontrollers to create synchronized light shows across multiple nodes. Each node controls 334 WS2812B NeoPixel LEDs with advanced networking, audio reactivity, and individual user control.
 
-## Current Status: Version 1.1.22 (Latest Development)
+## Current Status: Version 1.1.33 (Latest Development)
 
 **Last Updated**: August 2025  
 **Active Nodes**: ~10 devices (OTA system restored and working)  
 **Network**: Works with or without WiFi (ESP-NOW mesh priority)  
-**Recent Focus**: **NEW FEATURE:** Smooth pattern crossfading + OTA system restoration
+**Recent Focus**: **42 total patterns** with smooth crossfading, OTA restoration, and pattern cycling fixes
 
-## 🆕 Recent Major Improvements (v1.1.22)
+## 🆕 Recent Major Improvements (v1.1.33)
 
 ### ✅ Smooth Pattern Crossfading
 - **3-second crossfade transitions** between patterns instead of abrupt changes
@@ -18,12 +18,22 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 - **Music reactivity preserved** during crossfade periods
 - **Synchronized across all nodes** - leader controls crossfade timing
 
+### ✅ Pattern System Expansion  
+- **42 total patterns** - doubled from original 22 patterns with unique names
+- **Pattern cycling fix** - B button now cycles through all 42 patterns correctly
+- **Complete pattern library** - comprehensive collection from basic to advanced effects
+
 ### ✅ OTA System Restoration
 - **Simplified v56-style OTA** - removed complex mode management that was causing failures
 - **ESP-NOW conflict resolution** - proper shutdown sequence during OTA uploads
 - **Reliable wireless updates** - tested and working across all nodes
 - **Partition corruption recovery** - full flash erase capability for corrupted devices
 - **Authentication working** - "neopixel123" password system functional
+
+### ✅ Latency & Performance Fixes
+- **0.5 second latency eliminated** - improved ESP-NOW synchronization timing
+- **Boot quiet mode** - resolved OTA interference deadlock issues
+- **Improved mesh stability** - enhanced leader election and failover
 
 ## System Architecture
 
@@ -67,10 +77,11 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 
 ## Pattern System
 
-### 22 LED Patterns
+### 42 LED Patterns
 **Basic**: Rainbow, Chase, Juggle, Rainbow+Glitter, Confetti, BPM, Fire, Color Wheel, Random  
 **Advanced**: Pulse Wave, Meteor Shower, Color Spiral, Plasma Field, Sparkle Storm, Aurora Waves  
-**Organic**: Organic Flow, Wave Collapse, Color Drift, Liquid Rainbow, Sine Breath, Fractal Noise, Rainbow Strobe
+**Organic**: Organic Flow, Wave Collapse, Color Drift, Liquid Rainbow, Sine Breath, Fractal Noise, Rainbow Strobe  
+**Extended Collection**: 20 additional unique patterns with descriptive names for complete visual variety
 
 ### Pattern Generation
 - **Leader Only**: Generates patterns with audio reactivity baked into LED colors
@@ -120,13 +131,13 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 
 ### Modular Codebase
 - **config.h**: Hardware/network configuration, debug controls
-- **main.ino**: Setup and main loop coordination with version display
-- **patterns.cpp/.h**: All 22 LED pattern implementations with proper brightness handling
-- **networking.cpp/.h**: ESP-NOW communication, leader election, WiFi management
+- **main.ino**: Setup and main loop coordination with version display  
+- **patterns.cpp/.h**: All 42 LED pattern implementations with proper brightness handling and crossfading
+- **networking.cpp/.h**: ESP-NOW communication, leader election, WiFi management with improved timing
 - **audio.cpp/.h**: Microphone processing and BPM detection
-- **ui.cpp/.h**: LCD display and button handling with version display
+- **ui.cpp/.h**: LCD display and button handling with 42-pattern cycling fix
 - **ota.cpp/.h**: Over-the-air update functionality with ESP-NOW conflict resolution
-- **version.h**: Auto-generated version information
+- **version.h**: Auto-generated version information (currently v1.1.33)
 
 ### Smart Deployment System  
 - **nodes.txt File**: Maintains list of node IP addresses (currently 10 active nodes)
@@ -162,10 +173,12 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 
 ## Key Features Working ✅
 - ✅ Distributed leader election with automatic failover
-- ✅ 22 diverse LED patterns with extended 15-second duration
+- ✅ **42 diverse LED patterns** with smooth 3-second crossfading transitions  
+- ✅ **Pattern cycling fix** - B button now cycles through all 42 patterns correctly
 - ✅ Synchronized music reactivity across all nodes (dramatic response restored)
 - ✅ Individual brightness control (6%-100% + OFF)
-- ✅ Robust ESP-NOW networking with chunk validation
+- ✅ **0.5 second latency eliminated** - improved ESP-NOW synchronization timing
+- ✅ Robust ESP-NOW networking with chunk validation and improved stability
 - ✅ OTA deployment system with ESP-NOW conflict resolution (fixed August 2025)
 - ✅ Audio-responsive brightness scaling with full dynamic range
 - ✅ Comprehensive LCD UI with status indicators and version display

@@ -37,8 +37,10 @@ struct BrightnessLevel {
 };
 
 // ── Network Config ────────────────────────────────────────────────────────────
-#define MSGTYPE_RAW    0x00
-#define MSGTYPE_TOKEN  0x01
+#define MSGTYPE_RAW           0x00
+#define MSGTYPE_TOKEN         0x01
+#define MSGTYPE_OTA_SUSPEND   0x02  // Request all nodes to suspend ESP-NOW for OTA
+#define MSGTYPE_OTA_RESUME    0x03  // Request all nodes to resume ESP-NOW after OTA
 
 // ── WiFi Configuration (now handled in networking.cpp) ───────────────────────
 // WiFi networks are now defined in networking.cpp to support multiple networks
@@ -56,7 +58,7 @@ static constexpr uint32_t BPM_WINDOW = 5000;
 
 // ── Names ─────────────────────────────────────────────────────────────────────
 extern const char* MODE_NAMES[MODE_COUNT];
-extern const char* STYLE_NAMES[22];
+extern const char* STYLE_NAMES[42];
 extern BrightnessLevel brightnessLevels[6];
 
 // ── Global Variables ──────────────────────────────────────────────────────────
@@ -84,6 +86,12 @@ extern uint32_t electionStart, electionEnd;
 extern uint32_t myToken, highestTokenSeen, myDelay;
 extern bool     electionBroadcasted;
 extern uint32_t lastTokenBroadcast, lastHeartbeat, missedFrameCount;
+
+// ── OTA Coordination Variables ───────────────────────────────────────────────
+extern bool     otaSuspended;           // True when ESP-NOW is suspended for OTA
+extern uint32_t otaSuspendTimeout;      // When to auto-resume if OTA fails
+extern uint32_t otaSuspendDuration;     // How long to suspend (default 300 seconds)
+extern uint32_t bootupQuietTime;        // How long to stay quiet after boot (prevent OTA interference)
 
 // ── Audio Variables ───────────────────────────────────────────────────────────
 extern float   soundMin, soundMax, musicLevel;

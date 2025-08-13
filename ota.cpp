@@ -1,4 +1,5 @@
 #include "ota.h"
+#include "networking.h"
 #include "esp_task_wdt.h"
 
 // OTA mode state tracking
@@ -111,8 +112,12 @@ void setOTACallbacks(){
     
     if(DEBUG_SERIAL) Serial.println("OTA Start updating " + type);
     
-    // CRITICAL: Stop ESP-NOW and networking to reduce interference
-    // This is likely why leader nodes fail - they're too busy with ESP-NOW traffic
+    // CRITICAL: Request all nodes to suspend ESP-NOW traffic for OTA
+    // This coordinated approach should prevent interference across the mesh
+    sendOTASuspend();
+    delay(1000); // Give time for message to propagate
+    
+    // Also stop our own ESP-NOW
     esp_now_deinit();
     WiFi.mode(WIFI_STA); // Ensure we stay in STA mode for OTA
     
@@ -161,6 +166,9 @@ void setOTACallbacks(){
     canvas.setCursor(10, 65);
     canvas.print("Systems will restore");
     canvas.pushSprite(0, 0);
+    
+    // Resume ESP-NOW traffic on all nodes before rebooting
+    sendOTAResume();
     
     delay(3000); // Show success for 3 seconds before reboot
     if(DEBUG_SERIAL) Serial.println("[OTA] Rebooting now...");
@@ -252,6 +260,9 @@ void setOTACallbacks(){
     canvas.setCursor(10, 80);
     canvas.print("Will exit OTA mode");
     canvas.pushSprite(0, 0);
+    
+    // Resume ESP-NOW traffic on all nodes after OTA failure
+    sendOTAResume();
     
     delay(3000); // Show error for 3 seconds
     

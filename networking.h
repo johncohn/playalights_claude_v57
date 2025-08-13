@@ -12,4 +12,8 @@ void sendToken();
 void forceSyncReset();
 void handleWiFiTransition(bool wasConnected, bool nowConnected);
 
+// ── OTA Coordination Functions ───────────────────────────────────────────────
+void sendOTASuspend();
+void sendOTAResume();
+
 #endif
