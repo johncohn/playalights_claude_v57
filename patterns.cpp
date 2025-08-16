@@ -1118,7 +1118,7 @@ void runTimedWithCrossfade(void (*fn)()){
   
   uint32_t now = millis();
   uint32_t patternDuration = getTi() * 15000; // 15 second patterns
-  const uint32_t CROSSFADE_DURATION = 3000;   // 3 second crossfade
+  const uint32_t CROSSFADE_DURATION = 5000;   // 5 second crossfade
   
   // Initialize on first run
   if(firstRun) {

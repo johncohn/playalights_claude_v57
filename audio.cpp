@@ -16,9 +16,39 @@ void detectAudioFrame(){
   
   soundMin = min(raw, SMOOTH * soundMin + (1 - SMOOTH) * raw);
   soundMax = max(raw, SMOOTH * soundMax + (1 - SMOOTH) * raw);
-  musicLevel = constrain((raw - soundMin) / (soundMax - soundMin + 1e-6f), 0.0f, 1.0f);
   
-  bool above = (musicLevel > 0.6f);
+  // Adaptive sensitivity for high volume environments
+  float dynamicRange = soundMax - soundMin;
+  const float MIN_DYNAMIC_RANGE = 0.08f;  // Minimum range for reliable beat detection
+  const float HIGH_VOLUME_THRESHOLD = 0.7f;  // When average level indicates high volume environment
+  
+  float adaptedMin = soundMin;
+  float adaptedMax = soundMax;
+  float beatThreshold = 0.6f;  // Default threshold
+  
+  // Detect high volume saturation scenario
+  bool highVolumeEnvironment = (soundMin > HIGH_VOLUME_THRESHOLD) || (dynamicRange < MIN_DYNAMIC_RANGE);
+  
+  if(highVolumeEnvironment) {
+    // In high volume environments, expand the dynamic range artificially
+    if(dynamicRange < MIN_DYNAMIC_RANGE) {
+      float expansion = (MIN_DYNAMIC_RANGE - dynamicRange) * 0.5f;
+      adaptedMin = max(0.0f, soundMin - expansion);
+      adaptedMax = min(1.0f, soundMax + expansion);
+    }
+    
+    // Lower beat detection threshold in high volume environments
+    beatThreshold = 0.35f;
+    
+    if(DEBUG_BPM && millis() % 2000 < 50) {
+      Serial.printf("HIGH-VOL: range=%.3f->%.3f, thresh=%.2f, raw=%.3f\n", 
+        dynamicRange, adaptedMax - adaptedMin, beatThreshold, raw);
+    }
+  }
+  
+  musicLevel = constrain((raw - adaptedMin) / (adaptedMax - adaptedMin + 1e-6f), 0.0f, 1.0f);
+  
+  bool above = (musicLevel > beatThreshold);
   if(above && !prevAbove){
     uint32_t t = millis();
     if(beatCount < 50) {

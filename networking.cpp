@@ -404,9 +404,37 @@ void handleNetworking(){
       
       // Skip LED updates if ESP-NOW suspended for OTA
       if(!otaSuspended) {
-        // Apply leader's local brightness for its own display
-        FastLED.setBrightness(globalBrightnessScale);
-        FastLED.show();
+        // Leader delay: Buffer LED data and show it 0.5 seconds later to sync with followers
+        static CRGB leaderBuffer[NUM_LEDS];
+        static uint32_t leaderBufferTime = 0;
+        static bool leaderBufferValid = false;
+        const uint32_t LEADER_DELAY_MS = 500; // 0.5 second delay
+        
+        // Store current LED state for delayed display
+        memcpy(leaderBuffer, leds, sizeof(CRGB) * NUM_LEDS);
+        leaderBufferTime = now;
+        leaderBufferValid = true;
+        
+        // Check if we have buffered data ready to display
+        static CRGB delayedBuffer[NUM_LEDS];
+        static uint32_t delayedBufferTime = 0;
+        static bool delayedBufferValid = false;
+        
+        if(delayedBufferValid && (now - delayedBufferTime >= LEADER_DELAY_MS)) {
+          // Time to show the delayed LEDs
+          memcpy(leds, delayedBuffer, sizeof(CRGB) * NUM_LEDS);
+          FastLED.setBrightness(globalBrightnessScale);
+          FastLED.show();
+          delayedBufferValid = false;
+        }
+        
+        // Move current buffer to delayed buffer for next cycle
+        if(leaderBufferValid) {
+          memcpy(delayedBuffer, leaderBuffer, sizeof(CRGB) * NUM_LEDS);
+          delayedBufferTime = leaderBufferTime;
+          delayedBufferValid = true;
+          leaderBufferValid = false;
+        }
       }
       
       if(DEBUG_SERIAL && millis() % 10000 < 50) { // Less frequent debug
