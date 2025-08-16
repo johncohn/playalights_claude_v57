@@ -2,14 +2,27 @@
 
 A sophisticated distributed LED art installation system using M5StickC Plus2 microcontrollers to create synchronized light shows across multiple nodes. Each node controls 334 WS2812B NeoPixel LEDs with advanced networking, audio reactivity, and individual user control.
 
-## Current Status: Version 1.1.43 (Latest Development)
+## Current Status: Version 1.1.45 (Latest Development)
 
 **Last Updated**: August 2025  
 **Active Nodes**: ~11 devices (USB deployment - OTA discontinued)  
 **Network**: Works with or without WiFi (ESP-NOW mesh priority)  
-**Recent Focus**: **Enhanced OTA deployment system**, **42 total patterns** with smooth crossfading, USB deployment workflow
+**Recent Focus**: **Performance optimization**, **leader-follower synchronization**, **high-volume audio responsiveness**
 
-## 🆕 Recent Major Improvements (v1.1.43)
+## 🆕 Recent Major Improvements (v1.1.45)
+
+### ✅ Advanced Synchronization System
+- **5-second crossfade transitions** - extended from 3 seconds for even smoother pattern changes
+- **Leader delay compensation** - 0.5 second buffer system to perfectly sync leader with followers
+- **Dual buffer architecture** - leader delays its own display while immediately broadcasting to followers
+- **Eliminates timing gaps** - no more visible lag between leader and follower LED changes
+
+### ✅ High-Volume Audio Responsiveness
+- **Adaptive sensitivity scaling** - maintains beat detection even at very high volume levels (live shows)
+- **Dynamic range expansion** - artificially expands compressed audio range when moving averages converge
+- **Saturation detection** - automatically detects when microphone reaches limits (soundMin > 0.7 or range < 0.08)
+- **Threshold adaptation** - lowers beat detection from 0.6 to 0.35 in high-volume environments
+- **Preserves normal operation** - only activates when needed, maintains current performance at moderate levels
 
 ### ✅ Enhanced OTA Deployment System
 - **Robust retry logic** - up to 3 attempts per node automatically
@@ -18,13 +31,6 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 - **Extended timeouts** - 60-second timeout for reliable long uploads
 - **Stricter success detection** - prevents false positive success reports
 - **Beautiful summary tables** - clear deployment status for all nodes
-
-### ✅ Smooth Pattern Crossfading
-- **3-second crossfade transitions** between patterns instead of abrupt changes
-- **Dual pattern rendering** - both old and new patterns run simultaneously during transition
-- **Ease-in-out blending curve** for professional-quality visual transitions
-- **Music reactivity preserved** during crossfade periods
-- **Synchronized across all nodes** - leader controls crossfade timing
 
 ### ✅ Pattern System Expansion  
 - **42 total patterns** - doubled from original 22 patterns with unique names
@@ -94,7 +100,7 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 - **Music Mode**: When audio detected, `effectMusic()` scales LED colors by `musicLevel` (dramatic nearly-off to full-bright response)
 - **Background Mode**: Normal patterns when no audio detected
 - **Extended Timing**: Automatic pattern cycling every 15 seconds (3x longer than original 5 seconds)
-- **✅ NEW: Crossfade System**: 3-second smooth transitions between patterns with both patterns running simultaneously
+- **✅ NEW: Crossfade System**: 5-second smooth transitions between patterns with both patterns running simultaneously
 - **Full Brightness Broadcast**: Leader sends 100% brightness data, each node applies local scaling
 
 ## Audio Reactivity
@@ -143,7 +149,7 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 - **audio.cpp/.h**: Microphone processing and BPM detection
 - **ui.cpp/.h**: LCD display and button handling with 42-pattern cycling fix
 - **ota.cpp/.h**: Over-the-air update functionality with ESP-NOW conflict resolution
-- **version.h**: Auto-generated version information (currently v1.1.43)
+- **version.h**: Auto-generated version information (currently v1.1.45)
 
 ### USB Deployment System (Primary)
 - **USB-First Approach**: Reliable node-by-node deployment via USB cable
@@ -174,15 +180,16 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 - **OTA Password**: "neopixel123"  
 - **Default Brightness**: 25% (64/255) per node
 - **WiFi Networks**: Barn, johncohn6s (GMA-WIFI removed)
-- **Firmware Status**: All nodes updated to v1.1.7 with OTA fixes via USB deployment
+- **Firmware Status**: All nodes ready for v1.1.45 update with performance improvements via USB deployment
 
 ## Key Features Working ✅
 - ✅ Distributed leader election with automatic failover
-- ✅ **42 diverse LED patterns** with smooth 3-second crossfading transitions  
+- ✅ **42 diverse LED patterns** with smooth 5-second crossfading transitions  
 - ✅ **Pattern cycling fix** - B button now cycles through all 42 patterns correctly
 - ✅ Synchronized music reactivity across all nodes (dramatic response restored)
 - ✅ Individual brightness control (6%-100% + OFF)
-- ✅ **0.5 second latency eliminated** - improved ESP-NOW synchronization timing
+- ✅ **Leader-follower synchronization** - 0.5 second delay compensation system for perfect timing
+- ✅ **High-volume audio responsiveness** - adaptive scaling maintains beat detection at live show volumes
 - ✅ Robust ESP-NOW networking with chunk validation and improved stability
 - ✅ OTA deployment system with ESP-NOW conflict resolution (fixed August 2025)
 - ✅ Audio-responsive brightness scaling with full dynamic range
