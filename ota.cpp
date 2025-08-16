@@ -112,12 +112,10 @@ void setOTACallbacks(){
     
     if(DEBUG_SERIAL) Serial.println("OTA Start updating " + type);
     
-    // CRITICAL: Request all nodes to suspend ESP-NOW traffic for OTA
-    // This coordinated approach should prevent interference across the mesh
-    sendOTASuspend();
-    delay(1000); // Give time for message to propagate
+    // ESP-NOW suspension is now controlled manually via serial commands
+    // Use deploy script: echo "SUSPEND_ESPNOW" > /dev/ttyACM0 before OTA
     
-    // Also stop our own ESP-NOW
+    // Stop our own ESP-NOW (others controlled via serial command)
     esp_now_deinit();
     WiFi.mode(WIFI_STA); // Ensure we stay in STA mode for OTA
     
@@ -167,8 +165,8 @@ void setOTACallbacks(){
     canvas.print("Systems will restore");
     canvas.pushSprite(0, 0);
     
-    // Resume ESP-NOW traffic on all nodes before rebooting
-    sendOTAResume();
+    // ESP-NOW resumption is now controlled manually via serial commands  
+    // Use deploy script: echo "RESUME_ESPNOW" > /dev/ttyACM0 after OTA
     
     delay(3000); // Show success for 3 seconds before reboot
     if(DEBUG_SERIAL) Serial.println("[OTA] Rebooting now...");
@@ -261,8 +259,8 @@ void setOTACallbacks(){
     canvas.print("Will exit OTA mode");
     canvas.pushSprite(0, 0);
     
-    // Resume ESP-NOW traffic on all nodes after OTA failure
-    sendOTAResume();
+    // ESP-NOW resumption is now controlled manually via serial commands
+    // Use deploy script: echo "RESUME_ESPNOW" > /dev/ttyACM0 after OTA failure
     
     delay(3000); // Show error for 3 seconds
     

@@ -139,8 +139,35 @@ void handleButtons(){
     freezeActive = false; // Reset freeze when changing brightness
   }
 
-  // Button B: Pattern control (only works in AUTO mode when leader)
-  if(M5.BtnB.wasClicked() && currentMode == AUTO && fsmState == LEADER) {
+  // Button C double-click = ESP-NOW suspend/resume toggle (safe, avoids long press conflicts)
+  static uint32_t lastCClick = 0;
+  static uint8_t cClickCount = 0;
+  
+  if(M5.BtnC.wasClicked() && currentMode == AUTO) {
+    uint32_t now = millis();
+    
+    if(now - lastCClick < 500) { // Within 500ms = double click
+      cClickCount++;
+      if(cClickCount == 2) {
+        // Double-click detected - force sync reset
+        if(DEBUG_SERIAL) Serial.println("BUTTON C DOUBLE-CLICK: Force sync reset");
+        forceSyncReset();
+        cClickCount = 0; // Reset
+        return;
+      }
+    } else {
+      cClickCount = 1; // First click
+    }
+    lastCClick = now;
+  }
+  
+  // Reset click count after timeout
+  if(millis() - lastCClick > 500 && cClickCount == 1) {
+    cClickCount = 0; // Single click timeout, process as sync reset below
+  }
+  
+  // Button B: Short press = Pattern control (only works in AUTO mode when leader)
+  else if(M5.BtnB.wasClicked() && currentMode == AUTO && fsmState == LEADER) {
     if(!freezeActive) {
       freezeActive = true;
       if(DEBUG_SERIAL) Serial.println("Pattern freeze ON");
@@ -152,9 +179,9 @@ void handleButtons(){
     }
   }
   
-  // Button C: Manual sync reset (emergency resync button)
-  if(M5.BtnC.wasClicked() && currentMode == AUTO) {
-    if(DEBUG_SERIAL) Serial.println("MANUAL SYNC RESET requested via Button C");
+  // Button C: Single click = Manual sync reset (only if not part of double-click)
+  if(cClickCount == 0 && millis() - lastCClick > 500 && millis() - lastCClick < 1000 && currentMode == AUTO) {
+    if(DEBUG_SERIAL) Serial.println("MANUAL SYNC RESET requested via Button C single click");
     
     // Show reset indication on screen briefly
     canvas.fillSprite(TFT_BLACK);
@@ -172,6 +199,7 @@ void handleButtons(){
     forceSyncReset();
     
     delay(1000); // Show message for 1 second
+    lastCClick = 0; // Clear to prevent repeat
   }
 }
 

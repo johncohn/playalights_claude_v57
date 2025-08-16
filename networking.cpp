@@ -286,17 +286,6 @@ void handleNetworking(){
   
   if(currentMode != AUTO) return;
   
-  // Handle OTA coordination (optimized - single check)
-  if(otaSuspended) {
-    // Check for timeout while suspended
-    if(otaSuspendTimeout > 0 && now >= otaSuspendTimeout) {
-      if(DEBUG_SERIAL) Serial.println("[OTA] Timeout reached - auto-resuming ESP-NOW traffic");
-      otaSuspended = false;
-      otaSuspendTimeout = 0;
-    } else {
-      return; // Still suspended, skip networking
-    }
-  }
   
   // No OTA mode checks needed - v56 style handles OTA gracefully
   
@@ -311,10 +300,13 @@ void handleNetworking(){
   switch(fsmState){
     case FOLLOWER: {
       if(chunkMask == ((1u << ((NUM_LEDS + 74) / 75)) - 1u)){
-        // Followers apply only their LOCAL brightness (no audio detection)
-        // The LED data already contains the leader's music reactivity at FULL brightness
-        FastLED.setBrightness(globalBrightnessScale);
-        FastLED.show(); 
+        // Skip LED updates if ESP-NOW suspended for OTA
+        if(!otaSuspended) {
+          // Followers apply only their LOCAL brightness (no audio detection)
+          // The LED data already contains the leader's music reactivity at FULL brightness
+          FastLED.setBrightness(globalBrightnessScale);
+          FastLED.show(); 
+        }
         chunkMask = 0;
       }
       
@@ -410,9 +402,12 @@ void handleNetworking(){
       // Send the LED data with music reactivity baked into the colors at FULL brightness
       sendRaw();
       
-      // Apply leader's local brightness for its own display
-      FastLED.setBrightness(globalBrightnessScale);
-      FastLED.show();
+      // Skip LED updates if ESP-NOW suspended for OTA
+      if(!otaSuspended) {
+        // Apply leader's local brightness for its own display
+        FastLED.setBrightness(globalBrightnessScale);
+        FastLED.show();
+      }
       
       if(DEBUG_SERIAL && millis() % 10000 < 50) { // Less frequent debug
         Serial.printf("LEADER: music=%.2f, audioDetected=%s, localBright=%d, wifi=%s\n", 
@@ -445,39 +440,14 @@ void onRecv(const esp_now_recv_info_t*, const uint8_t* data, int len){
     return;
   }
   
-  // Handle OTA coordination messages
-  if(len >= 1 && data[0] == MSGTYPE_OTA_SUSPEND) {
-    if(DEBUG_SERIAL) Serial.println("[OTA] Received suspend request - stopping ESP-NOW traffic");
-    otaSuspended = true;
-    otaSuspendTimeout = millis() + otaSuspendDuration;
-    return;
-  }
-  
-  if(len >= 1 && data[0] == MSGTYPE_OTA_RESUME) {
-    if(DEBUG_SERIAL) Serial.println("[OTA] Received resume request - resuming ESP-NOW traffic");
-    otaSuspended = false;
-    otaSuspendTimeout = 0;
-    return;
-  }
-  
-  // Skip all ESP-NOW processing if suspended for OTA
-  if(otaSuspended) {
-    // SAFETY: If we hear any ESP-NOW traffic, exit quiet mode (normal operation detected)
-    if(DEBUG_SERIAL && otaSuspendTimeout > millis()) {
-      Serial.println("[OTA] Heard ESP-NOW traffic - exiting boot quiet mode early");
-    }
-    otaSuspended = false;
-    otaSuspendTimeout = 0;
-    // Continue processing this message since we're now active
-  }
   
   if(len < 10 || data[0] != MSGTYPE_RAW) return;
   
   uint32_t incomingToken; 
   memcpy(&incomingToken, data+5, 4);
   
-  // Minimal debug output to avoid blocking
-  if(DEBUG_SERIAL && millis() % 5000 < 50) { // Much less frequent
+  // Minimal debug output to avoid blocking (only if heartbeat debug enabled)
+  if(DEBUG_HEARTBEAT && millis() % 5000 < 50) { // Much less frequent
     Serial.printf("onRecv: fsm=%s token=0x%06X\n",
       (fsmState==LEADER?"LEADER":fsmState==FOLLOWER?"FOLLOWER":"ELECT"), incomingToken
     );
@@ -534,26 +504,6 @@ void sendToken(){
 
 // ── OTA Coordination Functions ───────────────────────────────────────────────
 
-void sendOTASuspend(){
-  uint8_t buf[1] = {MSGTYPE_OTA_SUSPEND};
-  esp_now_send(broadcastAddress, buf, sizeof(buf));
-  
-  // Also suspend ourselves
-  otaSuspended = true;
-  otaSuspendTimeout = millis() + otaSuspendDuration;
-  
-  if(DEBUG_SERIAL) Serial.println("[OTA] Broadcast suspend request - all nodes stopping ESP-NOW");
-}
 
-void sendOTAResume(){
-  uint8_t buf[1] = {MSGTYPE_OTA_RESUME};
-  esp_now_send(broadcastAddress, buf, sizeof(buf));
-  
-  // Also resume ourselves
-  otaSuspended = false;
-  otaSuspendTimeout = 0;
-  
-  if(DEBUG_SERIAL) Serial.println("[OTA] Broadcast resume request - all nodes resuming ESP-NOW");
-}
 
 // handleOTASuspendTimeout() function removed - inlined for performance

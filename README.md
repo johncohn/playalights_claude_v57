@@ -2,14 +2,22 @@
 
 A sophisticated distributed LED art installation system using M5StickC Plus2 microcontrollers to create synchronized light shows across multiple nodes. Each node controls 334 WS2812B NeoPixel LEDs with advanced networking, audio reactivity, and individual user control.
 
-## Current Status: Version 1.1.33 (Latest Development)
+## Current Status: Version 1.1.43 (Latest Development)
 
 **Last Updated**: August 2025  
-**Active Nodes**: ~10 devices (OTA system restored and working)  
+**Active Nodes**: ~11 devices (USB deployment - OTA discontinued)  
 **Network**: Works with or without WiFi (ESP-NOW mesh priority)  
-**Recent Focus**: **42 total patterns** with smooth crossfading, OTA restoration, and pattern cycling fixes
+**Recent Focus**: **Enhanced OTA deployment system**, **42 total patterns** with smooth crossfading, USB deployment workflow
 
-## 🆕 Recent Major Improvements (v1.1.33)
+## 🆕 Recent Major Improvements (v1.1.43)
+
+### ✅ Enhanced OTA Deployment System
+- **Robust retry logic** - up to 3 attempts per node automatically
+- **Detailed logging** - comprehensive OTA.txt summary file with attempt counts
+- **Selective retry** - option to retry only failed nodes from previous deployment
+- **Extended timeouts** - 60-second timeout for reliable long uploads
+- **Stricter success detection** - prevents false positive success reports
+- **Beautiful summary tables** - clear deployment status for all nodes
 
 ### ✅ Smooth Pattern Crossfading
 - **3-second crossfade transitions** between patterns instead of abrupt changes
@@ -23,12 +31,10 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 - **Pattern cycling fix** - B button now cycles through all 42 patterns correctly
 - **Complete pattern library** - comprehensive collection from basic to advanced effects
 
-### ✅ OTA System Restoration
-- **Simplified v56-style OTA** - removed complex mode management that was causing failures
-- **ESP-NOW conflict resolution** - proper shutdown sequence during OTA uploads
-- **Reliable wireless updates** - tested and working across all nodes
-- **Partition corruption recovery** - full flash erase capability for corrupted devices
-- **Authentication working** - "neopixel123" password system functional
+### ⚠️ OTA Deployment Status
+- **Enhanced OTA script** with comprehensive retry and logging capabilities
+- **USB deployment preferred** - switching to USB-only deployment for reliability
+- **Individual node targeting** - deploy to specific nodes via temporary node files
 
 ### ✅ Latency & Performance Fixes
 - **0.5 second latency eliminated** - improved ESP-NOW synchronization timing
@@ -137,17 +143,16 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 - **audio.cpp/.h**: Microphone processing and BPM detection
 - **ui.cpp/.h**: LCD display and button handling with 42-pattern cycling fix
 - **ota.cpp/.h**: Over-the-air update functionality with ESP-NOW conflict resolution
-- **version.h**: Auto-generated version information (currently v1.1.33)
+- **version.h**: Auto-generated version information (currently v1.1.43)
 
-### Smart Deployment System  
-- **nodes.txt File**: Maintains list of node IP addresses (currently 10 active nodes)
-- **Auto-Discovery**: Network scanning for responsive devices (optional)
+### USB Deployment System (Primary)
+- **USB-First Approach**: Reliable node-by-node deployment via USB cable
+- **Auto USB Detection**: Automatically detects USB-connected nodes for upload
 - **Smart Caching**: Only recompiles when source files change
 - **Version Management**: Auto-incrementing version numbers with each compile
-- **Retry Logic**: Up to 3 attempts per failed node with detailed reporting
-- **Parallel Deployment**: OTA updates to multiple nodes simultaneously
-- **USB Automation**: `usb_simple.sh` for batch USB updates when OTA fails
-- **✅ FIXED: OTA System**: Restored to v56-style simple implementation, ESP-NOW conflicts resolved
+- **Individual Targeting**: Deploy to specific nodes one at a time
+- **Enhanced OTA System**: Comprehensive retry logic and detailed logging (backup option)
+- **OTA.txt Summary**: Clean deployment status tracking for retry automation
 
 ### Deployment Options
 1. **Deploy** (compile if needed + upload with retries) [DEFAULT]
@@ -200,17 +205,17 @@ A sophisticated distributed LED art installation system using M5StickC Plus2 mic
 
 ### Development
 ```bash
-# Fast development iteration
-./deploy_nodes.sh    # Choose option 4: Compile only
-# → Fast incremental build, version bump, ready for deployment
+# Fast development iteration - compile only
+arduino-cli compile --fqbn esp32:esp32:m5stack_stickc_plus2
+# → Fast incremental build, version bump auto-incremented
 
-# When ready for OTA deployment
-./deploy_nodes.sh    # Choose option 1: Deploy (or 3: Upload only)
-# → Uses cached build, deploys with retry logic to nodes.txt IPs
+# USB deployment (primary method)
+arduino-cli upload --fqbn esp32:esp32:m5stack_stickc_plus2 --port <USB_PORT>
+# → Direct USB upload to connected node
 
-# For emergency/initial deployment via USB
-./usb_simple.sh     # Interactive USB deployment
-# → Compile once, then upload to each node via USB cable
+# Enhanced OTA deployment (backup method)
+./deploy_nodes.sh    # Choose option 3: Retry failed nodes from OTA.txt
+# → Uses OTA.txt to retry only previously failed nodes
 ```
 
 ### Operation

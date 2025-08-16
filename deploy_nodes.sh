@@ -1,9 +1,18 @@
 #!/bin/bash
 
-# NeoPixel Node Deployment Script - With Retry Logic & Version Management
+# NeoPixel Node Deployment Script - Enhanced with Robust Retry Logic
+# 
+# Features:
+# - Up to 3 retry attempts per node
+# - Detailed logging to ota.log file
+# - Comprehensive success/failure tracking
+# - Enhanced error detection and reporting
+# - Beautiful summary table with attempt counts
+# - Complete deployment history logging
+#
 # Compiles once, then uploads to multiple nodes via OTA with automatic retries
 
-echo "Starting NeoPixel Node Deployment..."
+echo "Starting Enhanced NeoPixel Node Deployment..."
 
 # Configuration
 FQBN="esp32:esp32:m5stack_stickc_plus2"
@@ -117,11 +126,15 @@ upload_to_node() {
     
     echo "Uploading to Node $node_num ($ip) - Attempt $attempt/$MAX_RETRIES..."
     
+    # Log attempt start
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - Node $ip - Attempt $attempt - STARTED" >> ota.log
+    
     # Find the compiled binary
     local binary_file="$BUILD_DIR/playalights_claude_v58.ino.bin"
     if [ ! -f "$binary_file" ]; then
         echo "   Node $node_num (Attempt $attempt): Binary file not found: $binary_file"
         echo "FAILED: Node $node_num ($ip) - Attempt $attempt failed (no binary)"
+        echo "$(date '+%Y-%m-%d %H:%M:%S') - Node $ip - Attempt $attempt - FAILED (no binary)" >> ota.log
         return 1
     fi
     
@@ -129,13 +142,14 @@ upload_to_node() {
     if [ ! -f "$ESPOTA_PATH" ]; then
         echo "   Node $node_num (Attempt $attempt): espota.py not found at: $ESPOTA_PATH"
         echo "FAILED: Node $node_num ($ip) - Attempt $attempt failed (no espota.py)"
+        echo "$(date '+%Y-%m-%d %H:%M:%S') - Node $ip - Attempt $attempt - FAILED (no espota.py)" >> ota.log
         return 1
     fi
     
     # Use espota.py for OTA upload
     local upload_output
     local exit_code
-    upload_output=$(python3 "$ESPOTA_PATH" -i "$ip" -p "$OTA_PORT" -a "$PASSWORD" -f "$binary_file" -r -d 2>&1)
+    upload_output=$(python3 "$ESPOTA_PATH" -i "$ip" -p "$OTA_PORT" -a "$PASSWORD" -f "$binary_file" -r -d -t 60 2>&1)
     exit_code=$?
     
     # Show output with node prefix
@@ -143,18 +157,24 @@ upload_to_node() {
         echo "   Node $node_num (Attempt $attempt): $line"
     done
     
-    # Improved failure detection for espota
-    if echo "$upload_output" | grep -q "ERROR\|FAILED\|Connection refused\|Timeout\|No route to host"; then
-        echo "FAILED: Node $node_num ($ip) - Attempt $attempt failed"
-        return 1
-    elif echo "$upload_output" | grep -q "Uploading.*100%\|Upload Done"; then
+    # Much stricter success detection - require explicit success indicators
+    if echo "$upload_output" | grep -q "Result: OK" && echo "$upload_output" | grep -q "Success" && echo "$upload_output" | grep -q "100%"; then
         echo "SUCCESS: Node $node_num ($ip) - Attempt $attempt succeeded"
+        echo "$(date '+%Y-%m-%d %H:%M:%S') - Node $ip - Attempt $attempt - SUCCESS" >> ota.log
         return 0
-    elif [ $exit_code -eq 0 ]; then
-        echo "SUCCESS: Node $node_num ($ip) - Attempt $attempt succeeded (exit code OK)"
-        return 0
-    else
+    elif echo "$upload_output" | grep -q "ERROR\|FAILED\|Connection refused\|Timeout\|No route to host\|timed out\|Authentication Failed\|Host.*Not Found"; then
+        local error_reason=$(echo "$upload_output" | grep -o "ERROR\|FAILED\|Connection refused\|Timeout\|No route to host\|timed out\|Authentication Failed\|Host.*Not Found" | head -1)
+        echo "FAILED: Node $node_num ($ip) - Attempt $attempt failed ($error_reason)"
+        echo "$(date '+%Y-%m-%d %H:%M:%S') - Node $ip - Attempt $attempt - FAILED ($error_reason)" >> ota.log
+        return 1
+    elif [ $exit_code -ne 0 ]; then
         echo "FAILED: Node $node_num ($ip) - Attempt $attempt failed (exit code: $exit_code)"
+        echo "$(date '+%Y-%m-%d %H:%M:%S') - Node $ip - Attempt $attempt - FAILED (exit code: $exit_code)" >> ota.log
+        return 1
+    else
+        # If no explicit success indicators, treat as failed
+        echo "FAILED: Node $node_num ($ip) - Attempt $attempt failed (incomplete upload)"
+        echo "$(date '+%Y-%m-%d %H:%M:%S') - Node $ip - Attempt $attempt - FAILED (incomplete upload)" >> ota.log
         return 1
     fi
 }
@@ -212,6 +232,49 @@ discover_nodes() {
         echo "Found ${#NODES[@]} responsive devices"
         return 0
     fi
+}
+
+# Function to load only failed nodes from OTA.txt
+load_failed_nodes() {
+    local ota_file="OTA.txt"
+    
+    if [ ! -f "$ota_file" ]; then
+        echo "No $ota_file found. Cannot retry failed nodes."
+        echo "Run a full deployment first to generate the summary file."
+        return 1
+    fi
+    
+    echo "Loading failed nodes from $ota_file..."
+    local failed_nodes=()
+    
+    # Read failed IPs from OTA.txt
+    while IFS=', ' read -r ip attempts status || [[ -n "$ip" ]]; do
+        # Skip comments and empty lines
+        if [[ "$ip" =~ ^[[:space:]]*# ]] || [[ -z "${ip// }" ]]; then
+            continue
+        fi
+        
+        # Clean up whitespace and check if status is FAILED
+        ip=$(echo "$ip" | xargs)
+        status=$(echo "$status" | xargs)
+        
+        if [[ "$status" == "FAILED" ]]; then
+            # Validate IP format
+            if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+                failed_nodes+=("$ip")
+                echo "   Found failed node: $ip (previous attempts: $attempts)"
+            fi
+        fi
+    done < "$ota_file"
+    
+    if [ ${#failed_nodes[@]} -eq 0 ]; then
+        echo "🎉 No failed nodes found in $ota_file - all nodes previously succeeded!"
+        return 1
+    fi
+    
+    NODES=("${failed_nodes[@]}")
+    echo "Ready to retry ${#NODES[@]} failed nodes from $ota_file"
+    return 0
 }
 
 # Function to load nodes from file
@@ -286,15 +349,76 @@ add_known_nodes() {
     echo "Ready to deploy to ${#NODES[@]} nodes"
 }
 
+# Function to send serial command to a connected node
+send_serial_command() {
+    local command="$1"
+    local port="$2"
+    
+    if [ -z "$port" ]; then
+        # Try to auto-detect USB serial port
+        if [ -e "/dev/ttyACM0" ]; then
+            port="/dev/ttyACM0"
+        elif [ -e "/dev/ttyUSB0" ]; then
+            port="/dev/ttyUSB0"
+        elif ls /dev/cu.usbmodem* >/dev/null 2>&1; then
+            port=$(ls /dev/cu.usbmodem* | head -1)
+        else
+            echo "   WARNING: No USB serial port detected. Serial commands skipped."
+            echo "   To use manual ESP-NOW control, connect a node via USB and retry."
+            return 1
+        fi
+    fi
+    
+    if [ ! -e "$port" ]; then
+        echo "   WARNING: Serial port $port not found. Serial commands skipped."
+        return 1
+    fi
+    
+    echo "   Sending '$command' to $port..."
+    
+    # Send command and wait for response
+    timeout 5s bash -c "
+        echo '$command' > '$port'
+        sleep 1
+        # Read response (if any)
+        timeout 2s cat '$port' 2>/dev/null | head -1
+    " || echo "   Serial command sent (no response read)"
+    
+    return 0
+}
+
 # Function to deploy with retry logic
 deploy_with_retries() {
     echo "Deploying to nodes with retry logic (max $MAX_RETRIES attempts per node)..."
     local success_count=0
     local failed_count=0
     
+    # Initialize detailed log file
+    echo "# OTA Deployment Log - $(date '+%Y-%m-%d %H:%M:%S')" > ota.log
+    echo "# Format: TIMESTAMP - IP_ADDRESS - ATTEMPT - STATUS" >> ota.log
+    echo "" >> ota.log
+    
     LAST_SUCCESSFUL_NODES=()
     LAST_FAILED_NODES=()
     RETRY_NODES=()
+    
+    # Step 1: Send ESP-NOW suspend command via USB serial
+    echo ""
+    echo "=== STEP 1: Suspending ESP-NOW traffic on all nodes ==="
+    echo "Looking for USB-connected node to send global suspend command..."
+    if send_serial_command "SUSPEND_ESPNOW"; then
+        echo "✓ ESP-NOW suspend command sent successfully"
+        echo "   All nodes should now suspend ESP-NOW traffic to prevent OTA interference"
+        sleep 2  # Give time for command to propagate across mesh
+    else
+        echo "⚠ Could not send ESP-NOW suspend command via USB"
+        echo "   OTA may experience interference from ESP-NOW traffic"
+        echo "   Consider manually connecting a node via USB for better reliability"
+    fi
+    
+    # Step 2: Deploy to all nodes via OTA
+    echo ""
+    echo "=== STEP 2: Deploying firmware via OTA ==="
     
     # First pass - try all nodes once
     for i in "${!NODES[@]}"; do
@@ -371,6 +495,94 @@ deploy_with_retries() {
         echo "3. Leader nodes may fail due to ESP-NOW traffic - try again when not leading"
         echo "4. Remove permanently offline IPs from nodes.txt"
     fi
+    
+    # Step 3: Send ESP-NOW resume command via USB serial
+    echo ""
+    echo "=== STEP 3: Resuming ESP-NOW traffic on all nodes ==="
+    echo "Looking for USB-connected node to send global resume command..."
+    if send_serial_command "RESUME_ESPNOW"; then
+        echo "✓ ESP-NOW resume command sent successfully"
+        echo "   All nodes should now resume normal ESP-NOW mesh operation"
+    else
+        echo "⚠ Could not send ESP-NOW resume command via USB"
+        echo "   Nodes may remain suspended - manually send 'RESUME_ESPNOW' via serial"
+        echo "   Or power cycle nodes to restore normal operation"
+    fi
+    
+    # Generate comprehensive summary and append to log
+    echo "" >> ota.log
+    echo "# DEPLOYMENT SUMMARY - $(date '+%Y-%m-%d %H:%M:%S')" >> ota.log
+    echo "# Total Nodes: ${#NODES[@]}" >> ota.log
+    echo "# Successful: $success_count" >> ota.log
+    echo "# Failed: $failed_count" >> ota.log
+    echo "# Max Retries: $MAX_RETRIES" >> ota.log
+    echo "" >> ota.log
+    
+    # Create clean summary file for retry automation
+    echo "# OTA Deployment Summary - $(date '+%Y-%m-%d %H:%M:%S')" > OTA.txt
+    echo "# Format: IP_ADDRESS, ATTEMPTS, STATUS" >> OTA.txt
+    
+    # Add detailed results for each node to both files
+    for i in "${!NODES[@]}"; do
+        local ip=${NODES[$i]}
+        local node_num=$((i + 1))
+        
+        # Count attempts for this node
+        local attempts=$(grep "Node $ip" ota.log | wc -l | xargs)
+        
+        # Determine final status
+        if [[ " ${LAST_SUCCESSFUL_NODES[@]} " =~ " ${ip} " ]]; then
+            echo "Node $ip - $attempts attempts - SUCCESS" >> ota.log
+            echo "$ip, $attempts, SUCCESS" >> OTA.txt
+        else
+            echo "Node $ip - $attempts attempts - FAILED" >> ota.log
+            echo "$ip, $attempts, FAILED" >> OTA.txt
+        fi
+    done
+    
+    # Display final summary
+    echo ""
+    echo "=================================================="
+    echo "COMPREHENSIVE OTA DEPLOYMENT SUMMARY"
+    echo "=================================================="
+    echo "📊 Total Nodes Attempted: ${#NODES[@]}"
+    echo "✅ Successfully Updated: $success_count"
+    echo "❌ Failed After $MAX_RETRIES Attempts: $failed_count"
+    echo "📝 Detailed log saved to: ota.log"
+    echo "📋 Clean summary saved to: OTA.txt"
+    if [ $failed_count -gt 0 ]; then
+        echo "🔄 To retry failed nodes only: ./deploy_nodes.sh → option 3"
+    fi
+    echo ""
+    
+    if [ -f ota.log ]; then
+        echo "📋 DETAILED RESULTS:"
+        echo "┌─────────────────┬──────────┬────────────┐"
+        echo "│ IP Address      │ Attempts │ Status     │"
+        echo "├─────────────────┼──────────┼────────────┤"
+        
+        for i in "${!NODES[@]}"; do
+            local ip=${NODES[$i]}
+            local attempts=$(grep "Node $ip" ota.log | wc -l | xargs)
+            
+            if [[ " ${LAST_SUCCESSFUL_NODES[@]} " =~ " ${ip} " ]]; then
+                printf "│ %-15s │ %-8s │ %-10s │\n" "$ip" "$attempts" "✅ SUCCESS"
+            else
+                printf "│ %-15s │ %-8s │ %-10s │\n" "$ip" "$attempts" "❌ FAILED"
+            fi
+        done
+        
+        echo "└─────────────────┴──────────┴────────────┘"
+        echo ""
+        echo "📄 Complete log contents:"
+        echo "----------------------------------------"
+        cat ota.log
+        echo "----------------------------------------"
+    fi
+    
+    echo ""
+    echo "🎯 Deployment $([ $failed_count -eq 0 ] && echo "COMPLETED SUCCESSFULLY" || echo "COMPLETED WITH $failed_count FAILURES")"
+    echo "=================================================="
 }
 
 # Function to clean cache
@@ -445,8 +657,9 @@ main() {
     echo "Choose node discovery method:"
     echo "1) Auto-discover nodes on network"
     echo "2) Load from nodes.txt file [DEFAULT]"
-    echo "3) Manual IP entry"
-    read -p "Enter choice (1-3) [2]: " discovery_choice
+    echo "3) Retry failed nodes from OTA.txt"
+    echo "4) Manual IP entry"
+    read -p "Enter choice (1-4) [2]: " discovery_choice
     
     discovery_choice=${discovery_choice:-2}
     
@@ -465,6 +678,12 @@ main() {
             load_nodes_from_file
             ;;
         3)
+            if ! load_failed_nodes; then
+                echo "Falling back to full nodes.txt file..."
+                load_nodes_from_file
+            fi
+            ;;
+        4)
             echo "Enter IP addresses (press Enter to finish):"
             NODES=()
             while true; do

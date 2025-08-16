@@ -43,9 +43,9 @@ bool     electionBroadcasted = false;
 uint32_t lastTokenBroadcast  = 0, lastHeartbeat      = 0, missedFrameCount   = 0;
 
 // ── OTA Coordination Variables ───────────────────────────────────────────────
-bool     otaSuspended        = true;   // Start suspended - assume OTA in progress
-uint32_t otaSuspendTimeout   = 0;
-uint32_t otaSuspendDuration  = 300000; // 5 minutes default timeout
+bool     otaSuspended        = false;  // Start active - controlled manually via serial commands
+uint32_t otaSuspendTimeout   = 0;      // No longer used - kept for compatibility  
+uint32_t otaSuspendDuration  = 300000; // No longer used - kept for compatibility
 uint32_t bootupQuietTime     = 60000;  // Stay quiet for 60s after boot
 
 // ── Audio Variables ───────────────────────────────────────────────────────────
@@ -188,12 +188,8 @@ void setup(){
   fill_solid(leds, NUM_LEDS, CRGB::Black);
   FastLED.show();
   
-  // OTA Coordination: Start in suspended mode to prevent interference
-  // Recently updated nodes should stay quiet until timeout or resume signal
-  otaSuspendTimeout = millis() + bootupQuietTime;
-  if(DEBUG_SERIAL) {
-    Serial.printf("[OTA] Boot quiet mode: %lu ms (prevents OTA interference)\n", bootupQuietTime);
-  }
+  // OTA Coordination: ESP-NOW suspension is now controlled manually via serial commands
+  // No automatic boot quiet mode - use "SUSPEND_ESPNOW" and "RESUME_ESPNOW" commands
   
   if(DEBUG_SERIAL) {
     Serial.printf("NeoPixel Controller v%s initialized - 42 patterns ready!\n", FIRMWARE_VERSION);
@@ -209,12 +205,53 @@ void setup(){
   feedWatchdog();
 }
 
+// ── Serial Command Handler ────────────────────────────────────────────────────
+void handleSerialCommands(){
+  static String commandBuffer = "";
+  
+  // Read any available serial data
+  while(Serial.available()) {
+    char c = Serial.read();
+    
+    // Debug: Flash blue briefly for ANY serial input
+    static uint32_t lastFlash = 0;
+    if(millis() - lastFlash > 100) { // Limit flash rate
+      fill_solid(leds, 5, CRGB::Blue); // Flash first 5 LEDs blue
+      FastLED.show();
+      lastFlash = millis();
+    }
+    
+    if(c == '\n' || c == '\r') {
+      // Command complete - process it
+      commandBuffer.trim();
+      
+      // No serial commands currently implemented
+      if(commandBuffer.length() > 0) {
+        Serial.println("[SERIAL] No commands available");
+      }
+      
+      commandBuffer = ""; // Clear buffer
+    } else {
+      commandBuffer += c; // Add character to buffer
+      
+      // Prevent buffer overflow
+      if(commandBuffer.length() > 50) {
+        commandBuffer = "";
+        Serial.println("ERROR: Command too long");
+      }
+    }
+  }
+}
+
 // ── Main Loop ─────────────────────────────────────────────────────────────────
 void loop(){
   // Feed watchdog at start of every loop
   feedWatchdog();
   
   M5.update();
+  
+  // Handle serial commands for OTA coordination
+  handleSerialCommands();
   
   // Initialize OTA if WiFi becomes available (retry periodically)
   initOTA();

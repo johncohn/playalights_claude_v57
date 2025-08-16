@@ -733,21 +733,31 @@ void styleNeonPulse(uint8_t sp) {
 void styleDigitalRain(uint8_t sp) {
   // Fade all pixels
   for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i].nscale8(240);
+    leds[i].nscale8(230); // Slower fade for more visible trails
   }
   
-  // Add new "drops"
-  if (random8() < sp / 2) {
-    leds[random8(NUM_LEDS / 4)] = CHSV(96, 255, 255); // Bright green
+  // Add multiple new "drops" - much more active
+  if (random8() < (sp + 40)) { // Much higher frequency
+    leds[random8(NUM_LEDS / 3)] = CHSV(96, 255, 255); // Bright green from top third
   }
   
-  // Rain effect - move pixels down
+  // Add additional drops from various positions
+  if (random8() < (sp / 2 + 25)) {
+    leds[random8(NUM_LEDS / 5)] = CHSV(120, 255, 200); // Lighter green variation
+  }
+  
+  // Add occasional bright white "data packets"
+  if (random8() < (sp / 4 + 15)) {
+    leds[random8(NUM_LEDS / 6)] = CHSV(0, 0, 255); // Bright white
+  }
+  
+  // Rain effect - move pixels down (faster)
   static uint32_t lastMove = 0;
-  if (millis() - lastMove > (100 - sp)) {
+  if (millis() - lastMove > (60 - sp)) { // Faster movement
     for (int i = NUM_LEDS - 1; i > 0; i--) {
-      if (leds[i-1].g > leds[i].g) {
+      if (leds[i-1].g > leds[i].g || (leds[i-1].r + leds[i-1].g + leds[i-1].b) > 50) {
         leds[i] = leds[i-1];
-        leds[i-1].nscale8(200);
+        leds[i-1].nscale8(180); // More visible trail
       }
     }
     lastMove = millis();
@@ -769,19 +779,39 @@ void stylePlasmaBalls(uint8_t sp) {
 }
 
 void styleLightningStorm(uint8_t sp) {
-  // Fade to dark blue background
+  // Fade to dark blue background (less aggressive fading)
   for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CHSV(160, 255, 20);
-    leds[i].nscale8(200);
+    leds[i] = CHSV(160, 255, 25); // Slightly brighter background
+    leds[i].nscale8(220); // Less aggressive fade for more atmosphere
   }
   
-  // Random lightning strikes
-  if (random8() < (sp / 10 + 2)) {
-    uint8_t strike_pos = random8(NUM_LEDS - 20);
-    uint8_t strike_len = random8(5, 20);
+  // Multiple lightning strikes - much more frequent and varied
+  if (random8() < (sp / 4 + 15)) { // Much higher frequency
+    uint8_t strike_pos = random8(NUM_LEDS - 30);
+    uint8_t strike_len = random8(8, 25); // Longer strikes
     
     for (int i = strike_pos; i < strike_pos + strike_len && i < NUM_LEDS; i++) {
       leds[i] = CHSV(0, 0, 255); // Bright white
+    }
+  }
+  
+  // Add secondary smaller lightning strikes
+  if (random8() < (sp / 6 + 10)) {
+    uint8_t strike_pos = random8(NUM_LEDS - 15);
+    uint8_t strike_len = random8(3, 12);
+    
+    for (int i = strike_pos; i < strike_pos + strike_len && i < NUM_LEDS; i++) {
+      leds[i] = CHSV(45, 100, 200); // Yellowish lightning
+    }
+  }
+  
+  // Add occasional purple lightning (different voltage)
+  if (random8() < (sp / 8 + 5)) {
+    uint8_t strike_pos = random8(NUM_LEDS - 10);
+    uint8_t strike_len = random8(2, 8);
+    
+    for (int i = strike_pos; i < strike_pos + strike_len && i < NUM_LEDS; i++) {
+      leds[i] = CHSV(200, 150, 180); // Purple lightning
     }
   }
 }
@@ -819,21 +849,27 @@ void styleCandleFlicker(uint8_t sp) {
 void styleColorDrips(uint8_t sp) {
   // Fade all pixels
   for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i].nscale8(250);
+    leds[i].nscale8(240); // Slower fade for more visible trails
   }
   
-  // Add new drips from top
-  if (random8() < (sp / 3 + 20)) {
+  // Add new drips from multiple positions (much more frequent)
+  if (random8() < (sp + 60)) { // Significantly increased frequency
+    uint8_t start_pos = random8(NUM_LEDS / 4); // Random starting position in top quarter
+    leds[start_pos] = CHSV(random8(), 255, 255);
+  }
+  
+  // Add occasional bright drips from the very top
+  if (random8() < (sp / 2 + 30)) {
     leds[0] = CHSV(random8(), 255, 255);
   }
   
-  // Move drips down
+  // Move drips down (faster movement)
   static uint32_t lastMove = 0;
-  if (millis() - lastMove > (150 - sp * 2)) {
+  if (millis() - lastMove > (80 - sp)) { // Much faster dripping
     for (int i = NUM_LEDS - 1; i > 0; i--) {
-      if (leds[i-1].r + leds[i-1].g + leds[i-1].b > 30) {
+      if (leds[i-1].r + leds[i-1].g + leds[i-1].b > 20) { // Lower threshold for movement
         leds[i] = leds[i-1];
-        leds[i-1].nscale8(220);
+        leds[i-1].nscale8(200); // More visible trail
       }
     }
     lastMove = millis();
