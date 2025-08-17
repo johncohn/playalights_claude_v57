@@ -659,19 +659,27 @@ void effectWildBG(){
 void effectMusic(){ 
   effectWild();
   
-  // CRITICAL FIX: Apply music scaling to FULL BRIGHTNESS patterns
-  // This gives the dramatic audio response you want (nearly off to full bright)
-  if(musicLevel > 0.1f) {
-    // Scale all LEDs by music level - this is where the dramatic effect happens
-    uint8_t musicScale = uint8_t(musicLevel * 255);
-    for(int i = 0; i < NUM_LEDS; i++) {
-      leds[i].nscale8(musicScale);
-    }
-  } else {
-    // When no music detected, dim to minimum but still visible
-    for(int i = 0; i < NUM_LEDS; i++) {
-      leds[i].nscale8(32); // About 12% brightness as minimum
-    }
+  // CRITICAL FIX: Apply dramatic music scaling to FULL BRIGHTNESS patterns
+  // Enhanced responsiveness: much more dramatic nearly-off to full-bright response
+  
+  // Always apply music scaling with enhanced contrast
+  // musicLevel ranges from 0.0 to 1.0, use the full range for maximum drama
+  float enhancedMusicLevel = musicLevel;
+  
+  // Boost the contrast: square the music level for more dramatic response
+  // This makes quiet sections much dimmer and loud sections stay bright
+  enhancedMusicLevel = enhancedMusicLevel * enhancedMusicLevel;
+  
+  // Set minimum to very low (3% instead of 12%) for dramatic contrast
+  const float MIN_BRIGHTNESS = 0.03f;  // 3% minimum
+  const float MAX_BRIGHTNESS = 1.0f;   // 100% maximum
+  
+  // Scale from 3% to 100% based on enhanced music level
+  float finalLevel = MIN_BRIGHTNESS + (enhancedMusicLevel * (MAX_BRIGHTNESS - MIN_BRIGHTNESS));
+  
+  uint8_t musicScale = uint8_t(finalLevel * 255);
+  for(int i = 0; i < NUM_LEDS; i++) {
+    leds[i].nscale8(musicScale);
   }
 }
 
@@ -1169,16 +1177,15 @@ void runTimedWithCrossfade(void (*fn)()){
       
       // Apply music effect if this is the music function
       if(fn == effectMusic) {
-        // Apply music scaling to the blended result
-        if(musicLevel > 0.1f) {
-          uint8_t musicScale = uint8_t(musicLevel * 255);
-          for(int i = 0; i < NUM_LEDS; i++) {
-            leds[i].nscale8(musicScale);
-          }
-        } else {
-          for(int i = 0; i < NUM_LEDS; i++) {
-            leds[i].nscale8(32); // About 12% brightness as minimum
-          }
+        // Apply enhanced dramatic music scaling to the blended result
+        float enhancedMusicLevel = musicLevel * musicLevel; // Square for more contrast
+        const float MIN_BRIGHTNESS = 0.03f;  // 3% minimum  
+        const float MAX_BRIGHTNESS = 1.0f;   // 100% maximum
+        float finalLevel = MIN_BRIGHTNESS + (enhancedMusicLevel * (MAX_BRIGHTNESS - MIN_BRIGHTNESS));
+        
+        uint8_t musicScale = uint8_t(finalLevel * 255);
+        for(int i = 0; i < NUM_LEDS; i++) {
+          leds[i].nscale8(musicScale);
         }
       }
     }
